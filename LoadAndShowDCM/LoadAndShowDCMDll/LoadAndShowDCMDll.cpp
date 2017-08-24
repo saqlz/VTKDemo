@@ -3,6 +3,15 @@
 #include "stdafx.h"
 #include "LoadAndShowDCMDll.h"
 
+int LoadAndShowDCM(const std::string& sPath)
+{
+    WisdomTechLoadAndShowDCM *instance = new WisdomTechLoadAndShowDCM();
+    int i = instance->LoadAndShowByPathAndDim(sPath);
+    delete instance;
+    return i;
+}
+
+
 WisdomTechLoadAndShowDCM::WisdomTechLoadAndShowDCM()
 {
 }
@@ -19,3 +28,4 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const std::string & sPath)
     }
     return 0;
 }
+

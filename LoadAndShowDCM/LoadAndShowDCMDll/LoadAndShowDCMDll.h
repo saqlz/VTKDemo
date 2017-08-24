@@ -7,6 +7,12 @@
 #define WISDOMTECHDLLDEFINE __declspec(dllimport)
 #endif
 
+extern "C"
+{
+    WISDOMTECHDLLDEFINE int LoadAndShowDCM(const std::string& sPath);
+};
+
+
 class WISDOMTECHDLLDEFINE WisdomTechLoadAndShowDCM
 {
 public:
