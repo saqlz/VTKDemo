@@ -13,10 +13,10 @@ namespace TestLoadAndShowDCM
 {
     public static class NativeMethods
     {
-//         [DllImport("LoadAndShowDCMDll.dll",
-//              EntryPoint = "LoadAndShowDCM",
-//              CharSet = CharSet.Unicode,
-//              CallingConvention = CallingConvention.StdCall)]
-//         internal static extern unsafe int LoadAndShowByPathAndDim(string filePath);
+        [DllImport("LoadAndShowDCMDll.dll",
+             EntryPoint = "LoadAndShowDCM",
+             CharSet = CharSet.Unicode,
+             CallingConvention = CallingConvention.StdCall)]
+        internal static extern unsafe int LoadAndShowByPathAndDim(string filePath);
     }
 }
