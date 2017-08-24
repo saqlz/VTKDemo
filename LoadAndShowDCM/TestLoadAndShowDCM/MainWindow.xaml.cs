@@ -24,5 +24,11 @@ namespace TestLoadAndShowDCM
         {
             InitializeComponent();
         }
+
+        private void button_Click(object sender, RoutedEventArgs e)
+        {
+           // int i = NativeMethods.LoadAndShowByPathAndDim(this.ITextBoxForPath.Text);
+            //Console.WriteLine(i);
+        }
     }
 }
