@@ -23,6 +23,15 @@
 #include "vtkRenderWindowInteractor.h"
 #include "vtkMetaImageReader.h"
 #include "vtkAutoInit.h"
+#include "vtkCamera.h"
+#include "vtkActor.h"
+#include "vtkProperty.h"
+#include "vtkVolume16Reader.h"
+#include "vtkContourFilter.h"
+#include "vtkPolyDataNormals.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkOutlineFilter.h"
+#include "vtkGenericDataArray.txx"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
