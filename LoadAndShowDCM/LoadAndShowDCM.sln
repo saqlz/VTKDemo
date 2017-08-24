@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LoadAndShowDCM", "LoadAndShowDCM\LoadAndShowDCM.vcxproj", "{60EDFD0E-E0F6-49A9-95EE-443B111796E0}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LoadAndShowDCMDll", "LoadAndShowDCMDll\LoadAndShowDCMDll.vcxproj", "{FFD05939-FC21-420E-A741-8517CED6C9F5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{60EDFD0E-E0F6-49A9-95EE-443B111796E0}.Release|x64.Build.0 = Release|x64
 		{60EDFD0E-E0F6-49A9-95EE-443B111796E0}.Release|x86.ActiveCfg = Release|Win32
 		{60EDFD0E-E0F6-49A9-95EE-443B111796E0}.Release|x86.Build.0 = Release|Win32
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Debug|x64.ActiveCfg = Debug|x64
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Debug|x64.Build.0 = Debug|x64
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Debug|x86.ActiveCfg = Debug|Win32
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Debug|x86.Build.0 = Debug|Win32
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Release|x64.ActiveCfg = Release|x64
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Release|x64.Build.0 = Release|x64
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Release|x86.ActiveCfg = Release|Win32
+		{FFD05939-FC21-420E-A741-8517CED6C9F5}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
