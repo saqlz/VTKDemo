@@ -32,6 +32,12 @@
 #include "vtkPolyDataMapper.h"
 #include "vtkOutlineFilter.h"
 #include "vtkGenericDataArray.txx"
+#include "vtkStripper.h"
+#include "vtkLookupTable.h"
+#include "vtkImageMapToColors.h"
+#include "vtkImageActor.h"
+#include "vtkImageMapper3D.h"
+
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
