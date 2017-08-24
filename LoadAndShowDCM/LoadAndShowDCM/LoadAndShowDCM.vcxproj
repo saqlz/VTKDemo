@@ -109,6 +109,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../../WisRay/lib_$(Configuration)/external/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>vtkCommonCore-8.0.lib;vtkIOImage-8.0.lib;vtkCommonExecutionModel-8.0.lib;vtkInteractionImage-8.0.lib;vtkRenderingCore-8.0.lib;vtkInteractionStyle-8.0.lib;vtkRenderingOpenGL2-8.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
