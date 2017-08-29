@@ -6,6 +6,13 @@
 
 #include <string>
 
+#include <stdio.h>
+#include <tchar.h>
+#include <iostream>
+#include <string>
+
+
+// TODO:  在此处引用程序需要的其他头文件
 #include "vtkSmartPointer.h"
 #include "vtkDICOMImageReader.h"
 #include "vtkImageViewer2.h"
@@ -34,3 +41,6 @@
 #include "vtkPNGWriter.h"
 #include "vtkWindowToImageFilter.h"
 #include "vtkWin32OpenGLRenderWindow.h"
+
+VTK_MODULE_INIT(vtkRenderingOpenGL2);
+VTK_MODULE_INIT(vtkInteractionStyle);

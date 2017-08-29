@@ -20,6 +20,8 @@
 #include "vtkTextProperty.h"
 #include "vtkTextMapper.h"
 #include "vtkActor2D.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkMetaImageReader.h"
 #include "vtkAutoInit.h"
@@ -39,6 +41,7 @@
 #include "vtkImageMapper3D.h"
 #include "vtkPNGWriter.h"
 #include "vtkWindowToImageFilter.h"
+#include "vtkWin32OpenGLRenderWindow.h"
 
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);

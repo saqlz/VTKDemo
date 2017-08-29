@@ -15,8 +15,8 @@ namespace TestLoadAndShowDCM
     {
         [DllImport("LoadAndShowDCMDll.dll",
              EntryPoint = "LoadAndShowDCM",
-             CharSet = CharSet.Unicode,
+             CharSet = CharSet.Ansi,
              CallingConvention = CallingConvention.StdCall)]
-        internal static extern unsafe int LoadAndShowByPathAndDim(string filePath, int windowWidth, int windowHeight);
+        internal static extern unsafe int LoadAndShowByPathAndDim(StringBuilder stb, int windowWidth, int windowHeight);
     }
 }

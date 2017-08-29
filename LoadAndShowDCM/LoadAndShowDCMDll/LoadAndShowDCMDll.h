@@ -9,7 +9,7 @@
 
 extern "C"
 {
-    WISDOMTECHDLLDEFINE int LoadAndShowDCM(const std::string& sPath, const int& iWidth, const int& iHeight);
+    WISDOMTECHDLLDEFINE int LoadAndShowDCM(const char* sPath, int iWidth, int iHeight);
 };
 
 
@@ -19,7 +19,7 @@ public:
     WisdomTechLoadAndShowDCM();
     virtual ~WisdomTechLoadAndShowDCM();
 public:
-    int LoadAndShowByPathAndDim(const std::string& sPath, const int& iWidth, const int& iHeight);
+    int LoadAndShowByPathAndDim(const char* sPath, const int& iWidth, const int& iHeight);
 };
 
 #endif

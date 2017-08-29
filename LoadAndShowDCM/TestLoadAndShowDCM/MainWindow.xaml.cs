@@ -29,7 +29,8 @@ namespace TestLoadAndShowDCM
         {
             var width = Convert.ToInt32(TestLoadAndShowCanvas.ActualWidth);
             var height = Convert.ToInt32(TestLoadAndShowCanvas.ActualHeight);
-            int flag = NativeMethods.LoadAndShowByPathAndDim(this.ITextBoxForPath.Text, width, height);
+            var path = this.ITextBoxForPath.Text;
+            int flag = NativeMethods.LoadAndShowByPathAndDim(new StringBuilder(path), width, height);
             if (0 == flag)
             {
                 var bitmap = new BitmapImage(new Uri(@"D:\MyWorks\VTKDemo\LoadAndShowDCM\LoadAndShowDCM\" + @"TestDelaunay2D.png",
