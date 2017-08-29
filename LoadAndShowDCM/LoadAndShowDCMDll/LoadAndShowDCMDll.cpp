@@ -55,8 +55,9 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const char* sPath, const i
     aCamera->SetPosition(0, 1, 0);
     aCamera->SetFocalPoint(0, 0, 0);
     aCamera->ComputeViewPlaneNormal();
+    aCamera->Zoom(0.5);
     aCamera->Azimuth(30.0);
-    aCamera->Elevation(30.0);
+    aCamera->Elevation(200.0);
 
     renderer->SetBackground(0, 0, 0);                   //设置背景为黑色
     renderer->AddActor(outline);                        //数据源
