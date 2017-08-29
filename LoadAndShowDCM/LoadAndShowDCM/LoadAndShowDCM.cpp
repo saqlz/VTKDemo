@@ -10,6 +10,7 @@
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
+#include "vtkWin32OpenGLRenderWindow.h"
 
 int main()
 {
@@ -22,6 +23,7 @@ int main()
     vtkSmartPointer<vtkRenderer> aRenderer = vtkSmartPointer<vtkRenderer>::New();
     vtkSmartPointer<vtkRenderWindow> renWin =
         vtkSmartPointer<vtkRenderWindow>::New();
+   
     renWin->AddRenderer(aRenderer);
     vtkSmartPointer<vtkRenderWindowInteractor> iren =
         vtkSmartPointer<vtkRenderWindowInteractor>::New();
@@ -30,7 +32,10 @@ int main()
     // Set a background color for the renderer and set the size of the
     // render window (expressed in pixels).
     aRenderer->SetBackground(0, 0, 0);
-    renWin->SetSize(640, 480);
+//     renWin->SetSize(0,0);
+//     renWin->BordersOff();
+//     renWin->SetDoubleBuffer(1);
+//    
 
     // The following reader is used to read a series of 2D slices (images)
     // that compose the volume. The slice dimensions are set, and the
@@ -107,6 +112,11 @@ int main()
     // render window (expressed in pixels).
     aRenderer->SetBackground(0, 0, 0);
     renWin->SetSize(640, 480);
+    renWin->OffScreenRenderingOn();
+
+
+
+
 
     // Note that when camera movement occurs (as it does in the Dolly()
     // method), the clipping planes often need adjusting. Clipping planes
@@ -116,9 +126,38 @@ int main()
     // between the planes is actually rendered.
     aRenderer->ResetCameraClippingRange();
 
+
+//     int w = renWin->GetSize()[0];
+//     int h = renWin->GetSize()[1];
+//     vtkSmartPointer<vtkUnsignedCharArray> pixels = vtkSmartPointer<vtkUnsignedCharArray>::New();
+//     pixels->SetArray(pdata, w*h * 4, 1);
+//     renWin->GetRGBACharPixelData(0, 0, h - 1, w - 1, 1, pixels);
+//     
+    
+    
+    
+
+  
+    //BMPParser::WriteRGBImageToBMP(fileName.c_str(), pixels->);
+    
+
     // Initialize the event loop and then start it.
     iren->Initialize();
+
+    renWin->Render();
+    vtkSmartPointer<vtkWindowToImageFilter> windowToImage = vtkSmartPointer<vtkWindowToImageFilter>::New();
+    windowToImage->SetInput(renWin);
+    vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
+    PNGWriter->SetInputConnection(windowToImage->GetOutputPort());
+    PNGWriter->SetFileName("TestDelaunay2D.png");
+    PNGWriter->Write();
+
     iren->Start();
+
+
+
+
+
 
     return 0;
 }

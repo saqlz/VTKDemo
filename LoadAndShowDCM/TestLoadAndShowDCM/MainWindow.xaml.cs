@@ -27,8 +27,21 @@ namespace TestLoadAndShowDCM
 
         private void button_Click(object sender, RoutedEventArgs e)
         {
-            int i = NativeMethods.LoadAndShowByPathAndDim(this.ITextBoxForPath.Text);
-            Console.WriteLine(i);
+            var width = Convert.ToInt32(TestLoadAndShowCanvas.ActualWidth);
+            var height = Convert.ToInt32(TestLoadAndShowCanvas.ActualHeight);
+            int flag = NativeMethods.LoadAndShowByPathAndDim(this.ITextBoxForPath.Text, width, height);
+            if (0 == flag)
+            {
+                var bitmap = new BitmapImage(new Uri(@"D:\MyWorks\VTKDemo\LoadAndShowDCM\LoadAndShowDCM\" + @"TestDelaunay2D.png",
+                                      UriKind.Absolute));
+                var image = new Image();
+                image.Source = bitmap;
+                this.TestLoadAndShowCanvas.Children.Add(image);
+            }
+            else
+            {
+                MessageBox.Show("Fail to create Filename", "xx");
+            }
         }
     }
 }

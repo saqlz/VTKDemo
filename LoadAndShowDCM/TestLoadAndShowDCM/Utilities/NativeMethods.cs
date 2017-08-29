@@ -17,6 +17,6 @@ namespace TestLoadAndShowDCM
              EntryPoint = "LoadAndShowDCM",
              CharSet = CharSet.Unicode,
              CallingConvention = CallingConvention.StdCall)]
-        internal static extern unsafe int LoadAndShowByPathAndDim(string filePath);
+        internal static extern unsafe int LoadAndShowByPathAndDim(string filePath, int windowWidth, int windowHeight);
     }
 }

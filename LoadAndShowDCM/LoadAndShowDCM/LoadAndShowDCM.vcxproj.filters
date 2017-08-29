@@ -27,12 +27,18 @@
     <ClInclude Include="header\wisdom_tech_common_defines.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="wisdom_tech_bitmap_helper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="LoadAndShowDCM.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="wisdom_tech_bitmap_helper.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

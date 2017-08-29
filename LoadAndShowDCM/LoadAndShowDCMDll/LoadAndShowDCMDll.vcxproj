@@ -106,7 +106,7 @@
       <AdditionalIncludeDirectories>../../WisRay/include/external/vtk/;../../WisRay/include/external/;../../WisRay/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies />
+      <AdditionalDependencies>vtkCommonCore-8.0.lib;vtkIOImage-8.0.lib;vtkCommonExecutionModel-8.0.lib;vtkInteractionImage-8.0.lib;vtkRenderingCore-8.0.lib;vtkInteractionStyle-8.0.lib;vtkRenderingOpenGL2-8.0.lib;vtkFiltersModeling-8.0.lib;vtkImagingStatistics-8.0.lib;vtkFiltersExtraction-8.0.lib;vtkFiltersStatistics-8.0.lib;vtkImagingFourier-8.0.lib;vtkalglib-8.0.lib;vtkRenderingVolumeOpenGL2-8.0.lib;vtkImagingMath-8.0.lib;vtkglew-8.0.lib;vtkRenderingVolume-8.0.lib;vtkIOXML-8.0.lib;vtkIOXMLParser-8.0.lib;vtkIOCore-8.0.lib;vtklz4-8.0.lib;vtkexpat-8.0.lib;vtkDICOMParser-8.0.lib;vtkmetaio-8.0.lib;vtkpng-8.0.lib;vtktiff-8.0.lib;vtkzlib-8.0.lib;vtkjpeg-8.0.lib;vtkImagingCore-8.0.lib;vtkFiltersGeometry-8.0.lib;vtkFiltersSources-8.0.lib;vtkFiltersGeneral-8.0.lib;vtkFiltersCore-8.0.lib;vtkCommonComputationalGeometry-8.0.lib;vtkCommonColor-8.0.lib;vtkCommonDataModel-8.0.lib;vtkCommonMisc-8.0.lib;vtkCommonSystem-8.0.lib;vtksys-8.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>../../WisRay/lib_$(Configuration)/external/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>

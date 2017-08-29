@@ -37,6 +37,8 @@
 #include "vtkImageMapToColors.h"
 #include "vtkImageActor.h"
 #include "vtkImageMapper3D.h"
+#include "vtkPNGWriter.h"
+#include "vtkWindowToImageFilter.h"
 
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
