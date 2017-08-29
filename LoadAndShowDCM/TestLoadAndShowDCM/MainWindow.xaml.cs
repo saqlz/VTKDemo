@@ -33,10 +33,8 @@ namespace TestLoadAndShowDCM
             int flag = NativeMethods.LoadAndShowByPathAndDim(new StringBuilder(path), width, height);
             if (0 == flag)
             {
-                var bitmap = new BitmapImage(new Uri(@"D:\MyWorks\VTKDemo\LoadAndShowDCM\LoadAndShowDCM\" + @"TestDelaunay2D.png",
-                                      UriKind.Absolute));
-                var image = new Image();
-                image.Source = bitmap;
+                var bitmap = new BitmapImage(new Uri(AppDomain.CurrentDomain.BaseDirectory + "TestDelaunay2D.png", UriKind.RelativeOrAbsolute));
+                var image = new Image {Source = bitmap};
                 this.TestLoadAndShowCanvas.Children.Add(image);
             }
             else
