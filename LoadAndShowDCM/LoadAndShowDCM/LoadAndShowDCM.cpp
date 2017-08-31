@@ -55,8 +55,14 @@ int main()
     windowToImage->SetInput(renderWindow);
     vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
     PNGWriter->SetInputConnection(windowToImage->GetOutputPort());
-    PNGWriter->SetFileName("TestDelaunay2D.png");
-    PNGWriter->Write();
+    //PNGWriter->SetFileName("TestDelaunay2D.png");
+    //PNGWriter->Write();
+
+    vtkUnsignedCharArray* array = PNGWriter->GetResult();
+    array->GetNumberOfTuples();
+
+
+
     return 0;
 }
 
