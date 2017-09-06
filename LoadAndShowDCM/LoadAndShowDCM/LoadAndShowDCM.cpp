@@ -50,16 +50,35 @@ int main()
     renderer->SetActiveCamera(aCamera);                 //相机
     renderWindow->Render();                             //渲染，此时已经渲染出来了
 
-                                                        //输出当前的PNG文件
+   //输出当前的PNG文件
     vtkSmartPointer<vtkWindowToImageFilter> windowToImage = vtkSmartPointer<vtkWindowToImageFilter>::New();
     windowToImage->SetInput(renderWindow);
-    vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
-    PNGWriter->SetInputConnection(windowToImage->GetOutputPort());
+    windowToImage->Update();
+    vtkSmartPointer<vtkImageData> imageData = windowToImage->GetOutput();
+   
+    void* image = imageData->GetScalarPointer();
+    int* imageDimension = imageData->GetDimensions();
+    int component = imageData->GetNumberOfScalarComponents();
+    ofstream outStream;
+    outStream.open("D:\\Image.txt", ios::out | ios::binary);
+    outStream.write((char*)image, imageDimension[0] * imageDimension[1] * component);
+    outStream.close();
+
+
+
+
+
+    
+    //vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
+    //PNGWriter->SetInputConnection(windowToImage->GetOutputPort());
     //PNGWriter->SetFileName("TestDelaunay2D.png");
     //PNGWriter->Write();
 
-    vtkUnsignedCharArray* array = PNGWriter->GetResult();
-    array->GetNumberOfTuples();
+
+
+
+
+
 
 
 

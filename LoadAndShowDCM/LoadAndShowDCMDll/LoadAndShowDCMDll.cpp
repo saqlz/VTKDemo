@@ -64,7 +64,7 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const char* sPath, const i
     renderer->SetActiveCamera(aCamera);                 //相机
     renderWindow->Render();                             //渲染，此时已经渲染出来了
 
-                                                        //输出当前的PNG文件
+    //输出当前的PNG文件
     vtkSmartPointer<vtkWindowToImageFilter> windowToImage = vtkSmartPointer<vtkWindowToImageFilter>::New();
     windowToImage->SetInput(renderWindow);
     vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
