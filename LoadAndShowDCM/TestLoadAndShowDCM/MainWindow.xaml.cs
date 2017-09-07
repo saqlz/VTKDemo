@@ -38,7 +38,7 @@ namespace TestLoadAndShowDCM
             int flag = NativeMethods.LoadAndShowByPathAndDim(new StringBuilder(path), width, height);
             if (0 == flag)
             {
-                Thread.Sleep(5000);
+                Thread.Sleep(500);
                 var bitmap = BitmapHelpers.GeneratedBitmapByBitmapImageData(SocketService.ImageArray, width, height);
                 var bitmapImage = BitmapHelpers.ConvertByteArrayToBitmapImage(BitmapHelpers.ConvertBitmapToByteArray(bitmap));
                 var image = new Image() { Source = bitmapImage };

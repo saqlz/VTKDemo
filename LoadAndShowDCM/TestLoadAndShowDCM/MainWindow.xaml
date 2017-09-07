@@ -7,13 +7,13 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="350" Width="525">
     <Grid>
-        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="411,279,0,0" VerticalAlignment="Top" Width="75" Click="button_Click"/>
-        <Border BorderBrush="#A0A0A0" BorderThickness="2" CornerRadius="5" Width="486" HorizontalAlignment="Left" Margin="0,10,0,73.8">
-            <Canvas x:Name="TestLoadAndShowCanvas" Margin="0.4,0.4,0,-18.6"/>
+        <Button x:Name="button" Content="Button" HorizontalAlignment="Left" Margin="211,279,0,0" VerticalAlignment="Top" Width="75" Click="button_Click"/>
+        <Border BorderBrush="#A0A0A0" BorderThickness="2" CornerRadius="5" Width="520" Height="Auto" HorizontalAlignment="Left" Margin="0,10,0,73.8">
+            <Canvas x:Name="TestLoadAndShowCanvas" Margin="0.4,0.4,0,-18.6" Width="520" Height="300"/>
         </Border>
         <TextBox x:Name="ITextBoxForPath" BorderBrush="Black"
-                   HorizontalAlignment="Left" Margin="10,279,0,0" TextWrapping="Wrap" Text="" 
-                   VerticalAlignment="Top" Width="376" Height="19"/>
+                   HorizontalAlignment="Left" Margin="10,279,0,0" TextWrapping="Wrap" Text="E:\\Images\\Test\\" 
+                   VerticalAlignment="Top" Width="176" Height="19"/>
 
     </Grid>
 </Window>
