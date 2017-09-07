@@ -56,19 +56,19 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const char* sPath, const i
 
     vtkSmartPointer<vtkActor> outline = vtkSmartPointer<vtkActor>::New();
     outline->SetMapper(mapOutline);
-    outline->GetProperty()->SetColor(0, 0, 0);
+    outline->GetProperty()->SetColor(255, 255, 255);
 
     //设置渲染的窗口，指定为vtkWin32OpenGLRenderWindow，是vtkRenderer对象的容器
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkWin32OpenGLRenderWindow>::New();
     renderWindow->SetSize(iWidth, iHeight);              //设置大小
-                                                         //renderWindow->OffScreenRenderingOn();                //离屏渲染，不显示窗口
+    renderWindow->OffScreenRenderingOn();                //离屏渲染，不显示窗口
 
-                                                         //设置一个渲染的视野,一般称为ViewPort或者Cell
-                                                         //作用记录图像三维信息转换，聚合其他元素，比如照相机
+    //设置一个渲染的视野,一般称为ViewPort或者Cell
+    //作用记录图像三维信息转换，聚合其他元素，比如照相机
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderWindow->AddRenderer(renderer);                //注意一个vtkRenderWindow只能聚合一个vtkRenderer对象
 
-                                                        //设置照相机方位和位置
+    //设置照相机方位和位置
     vtkSmartPointer<vtkCamera> aCamera = vtkSmartPointer<vtkCamera>::New();
     aCamera->SetViewUp(0, 0, -1);
     aCamera->SetPosition(0, 1, 0);

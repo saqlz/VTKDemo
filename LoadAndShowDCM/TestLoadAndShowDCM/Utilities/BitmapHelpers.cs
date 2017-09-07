@@ -42,6 +42,7 @@ namespace TestLoadAndShowDCM
                 }
             }
             bitmap.UnlockBits(bitmapImageData);
+            bitmap.RotateFlip(RotateFlipType.Rotate180FlipX);
             return bitmap;
         }
 
