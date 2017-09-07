@@ -63,14 +63,20 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const char* sPath, const i
     renderer->AddActor(outline);                        //数据源
     renderer->SetActiveCamera(aCamera);                 //相机
     renderWindow->Render();                             //渲染，此时已经渲染出来了
-
-    //输出当前的PNG文件
+   
     vtkSmartPointer<vtkWindowToImageFilter> windowToImage = vtkSmartPointer<vtkWindowToImageFilter>::New();
     windowToImage->SetInput(renderWindow);
-    vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
-    PNGWriter->SetInputConnection(windowToImage->GetOutputPort());
-    PNGWriter->SetFileName("TestDelaunay2D.png");
-    PNGWriter->Write();
+    windowToImage->Update();
+    vtkSmartPointer<vtkImageData> imageData = windowToImage->GetOutput();
+    void* image = imageData->GetScalarPointer();
+    int* imageDimension = imageData->GetDimensions();
+    int component = imageData->GetNumberOfScalarComponents();
+
+    std::string host = "127.0.0.1";
+    vtkSmartPointer<vtkClientSocket> socketCommunicator = vtkSmartPointer<vtkClientSocket>::New();
+    socketCommunicator->ConnectToServer(host.c_str(), 20000);
+    socketCommunicator->Send(image, imageDimension[0] * imageDimension[1] * component);
+
     return 0;
 }
 

@@ -63,11 +63,6 @@ int main()
     outStream.open("D:\\Image.txt", ios::out | ios::binary);
     outStream.write((char*)image, imageDimension[0] * imageDimension[1] * component);
     outStream.close();
-
-
-
-
-
     
     //vtkSmartPointer<vtkPNGWriter> PNGWriter = vtkSmartPointer<vtkPNGWriter>::New();
     //PNGWriter->SetInputConnection(windowToImage->GetOutputPort());

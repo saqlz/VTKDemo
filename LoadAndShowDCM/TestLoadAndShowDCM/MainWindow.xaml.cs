@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,6 +24,10 @@ namespace TestLoadAndShowDCM
         public MainWindow()
         {
             InitializeComponent();
+            new Thread(() =>
+            {
+                 new SocketService();
+            }).Start();
         }
 
         private void button_Click(object sender, RoutedEventArgs e)
@@ -33,8 +38,10 @@ namespace TestLoadAndShowDCM
             int flag = NativeMethods.LoadAndShowByPathAndDim(new StringBuilder(path), width, height);
             if (0 == flag)
             {
-                var bitmap = new BitmapImage(new Uri(AppDomain.CurrentDomain.BaseDirectory + "TestDelaunay2D.png", UriKind.RelativeOrAbsolute));
-                var image = new Image {Source = bitmap};
+                Thread.Sleep(5000);
+                var bitmap = BitmapHelpers.GeneratedBitmapByBitmapImageData(SocketService.ImageArray, width, height);
+                var bitmapImage = BitmapHelpers.ConvertByteArrayToBitmapImage(BitmapHelpers.ConvertBitmapToByteArray(bitmap));
+                var image = new Image() { Source = bitmapImage };
                 this.TestLoadAndShowCanvas.Children.Add(image);
             }
             else

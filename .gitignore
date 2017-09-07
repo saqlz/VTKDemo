@@ -6503,3 +6503,7 @@
 /WisRay/include/external/vtk/vtkArrayDispatch.txx
 /WisRay/include/external/vtk/vtkAOSDataArrayTemplate.txx
 /WisRay/include/external/vtk/vtkAngularPeriodicDataArray.txx
+/WisRay/bin_debug/TestLoadAndShowDCM.vshost.exe.manifest
+/WisRay/bin_debug/TestDelaunay2D.png
+*.obj
+*.lref

@@ -41,6 +41,9 @@
 #include "vtkPNGWriter.h"
 #include "vtkWindowToImageFilter.h"
 #include "vtkWin32OpenGLRenderWindow.h"
+#include "vtkSocket.h"
+#include "vtkClientSocket.h"
+#include "vtkSocketCommunicator.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
