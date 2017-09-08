@@ -42,7 +42,12 @@
 #include "vtkPNGWriter.h"
 #include "vtkWindowToImageFilter.h"
 #include "vtkWin32OpenGLRenderWindow.h"
-
+#include "vtkFixedPointVolumeRayCastMapper.h"
+#include "vtkVolumeProperty.h"
+#include "vtkPiecewiseFunction.h"
+#include "vtkColorTransferFunction.h"
+#include "vtkVolumeRayCastMapper.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
+VTK_MODULE_INIT(vtkRenderingVolumeOpenGL2);
