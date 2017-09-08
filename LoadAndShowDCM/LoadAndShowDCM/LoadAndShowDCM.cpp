@@ -16,8 +16,8 @@ int main()
     v16->SetDirectoryName(sPath.c_str());
     v16->Update();
 
-    vtkSmartPointer<vtkVolumeRayCastMapper> volumeMapper =
-        vtkSmartPointer<vtkVolumeRayCastMapper>::New();
+    vtkSmartPointer<vtkFixedPointVolumeRayCastMapper> volumeMapper =
+        vtkSmartPointer<vtkFixedPointVolumeRayCastMapper>::New();
     volumeMapper->SetInputData(v16->GetOutput());
 
     //设置光线采样距离  
