@@ -48,6 +48,10 @@
 #include "vtkColorTransferFunction.h"
 #include "vtkVolumeRayCastMapper.h"
 #include "vtkGPUVolumeRayCastMapper.h"
+#include "vtkImageGaussianSmooth.h"
+#include "vtkOpenGLGPUVolumeRayCastMapper.h"
+#include "vtkMultiBlockVolumeMapper.h"
+#include "vtkOpenGLProjectedTetrahedraMapper.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
