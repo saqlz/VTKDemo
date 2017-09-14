@@ -33,29 +33,27 @@ int main()
     volumeProperty->SetDiffuse(0.6);   //漫反射
     volumeProperty->SetSpecular(0.5);  //镜面反射
    
-    //设置不透明度  
+    //设置不透明度与WWWL调窗一致 
     vtkSmartPointer<vtkPiecewiseFunction> opacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    opacityTransferFunction->AddPoint(-324, 0, 0.5, 0.0);
-    opacityTransferFunction->AddPoint(-16, 0, .49, .61);
-    opacityTransferFunction->AddSegment(641, .72, .5, 0.0);
-    opacityTransferFunction->AddPoint(3071, 0.0, 0.5, 0.0);
+    opacityTransferFunction->AddPoint(-1024, 0.0);
+    opacityTransferFunction->AddPoint(100, 0.0);
+    opacityTransferFunction->AddPoint(1250, 1.0);
     volumeProperty->SetScalarOpacity(opacityTransferFunction); //设置不透明度传输函数  
 
     //设置梯度不透明属性  
     vtkSmartPointer<vtkPiecewiseFunction> volumeGradientOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    volumeGradientOpacity->AddPoint(0, 2.0);
-    volumeGradientOpacity->AddPoint(-1024, 2.0);
-    volumeGradientOpacity->AddSegment(600, 0.73, 900, 0.9);
-    volumeGradientOpacity->AddPoint(1024, 0.1);
+    volumeGradientOpacity->AddPoint(0, 1);
+    volumeGradientOpacity->AddSegment(300, 0.73, 900, 0.9);
+    volumeGradientOpacity->AddPoint(1024, 0);
     volumeProperty->SetGradientOpacity(volumeGradientOpacity);//设置梯度不透明度效果对比  
 
-//     //设置颜色属性  
-//     vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
-//     color->AddRGBPoint(-3024, 0, 0, 0, 0.5, 0.0);
-//     color->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
-//     color->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
-//     color->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
-//     volumeProperty->SetColor(color);
+     //设置颜色属性  
+     vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
+     color->AddRGBPoint(-3024, 0, 0, 0, 0.5, 0.0);
+     color->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
+     color->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
+     color->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
+     volumeProperty->SetColor(color);
 
     vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
     volume->SetMapper(volumeMapper);
