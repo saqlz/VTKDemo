@@ -1,0 +1,123 @@
+// LoadAndShowDCM.cpp : 定义控制台应用程序的入口点。
+//
+
+#include "stdafx.h"
+
+int main()
+{
+    std::string sPath = "E:\\Images\\Test\\";
+    int iWidth = 640;
+    int iHeight = 480;
+
+    //Step0. 加Load DICOM Data
+    //Step0. 加载DIOCM原始数据
+    vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    reader->SetDataByteOrderToLittleEndian();
+    reader->SetDirectoryName(sPath.c_str());
+    reader->Update();
+  
+    vtkSmartPointer<vtkGPUVolumeRayCastMapper> volumeMapper1 =
+        vtkSmartPointer<vtkGPUVolumeRayCastMapper>::New();
+    volumeMapper1->SetInputData(reader->GetOutput());
+
+    vtkSmartPointer<vtkGPUVolumeRayCastMapper> volumeMapper2 =
+        vtkSmartPointer<vtkGPUVolumeRayCastMapper>::New();
+    volumeMapper2->SetInputData(reader->GetOutput());
+    /****************************************************************/
+    vtkSmartPointer<vtkVolumeProperty> volumeProperty1 =
+        vtkSmartPointer<vtkVolumeProperty>::New();
+    volumeProperty1->SetInterpolationTypeToLinear(); //设置线性插值  
+    volumeProperty1->ShadeOn();//开启阴影功能   
+    volumeProperty1->SetAmbient(0.4);//设置环境温度系数  
+    volumeProperty1->SetDiffuse(0.6);//设置漫反射系数  
+    volumeProperty1->SetSpecular(0.2);//设置镜面反射系数  
+
+    vtkSmartPointer<vtkVolumeProperty> volumeProperty2 =
+        vtkSmartPointer<vtkVolumeProperty>::New();
+    volumeProperty2->SetInterpolationTypeToLinear(); //设置线性插值  
+    volumeProperty2->ShadeOn();//开启阴影功能   
+    volumeProperty2->SetAmbient(0.4);//设置环境光强系数  
+    volumeProperty2->SetDiffuse(0.6);//设置漫反射系数  
+    volumeProperty2->SetSpecular(0.2);//设置镜面反射系数  
+
+    vtkSmartPointer<vtkPiecewiseFunction> compositeOpacity =
+        vtkSmartPointer<vtkPiecewiseFunction>::New();
+    compositeOpacity->AddPoint(50, 0.0);
+    compositeOpacity->AddPoint(120, 0.5);
+    compositeOpacity->AddPoint(200, 1.0);
+    volumeProperty1->SetScalarOpacity(compositeOpacity);
+    volumeProperty2->SetScalarOpacity(compositeOpacity);
+    //////////////////////////////////////////////////////  
+    //梯度不透明度函数1  
+    vtkSmartPointer<vtkPiecewiseFunction> gradientOpacity1 =
+        vtkSmartPointer<vtkPiecewiseFunction>::New();
+    gradientOpacity1->AddPoint(1, 0.0);
+    gradientOpacity1->AddPoint(70, 0.5);
+    gradientOpacity1->AddPoint(130, 1.0);
+    volumeProperty1->SetGradientOpacity(gradientOpacity1);
+    ////////////////////////////////////////////////////////  
+    //梯度不透明度函数2  
+    vtkSmartPointer<vtkPiecewiseFunction> gradientOpacity2 =
+        vtkSmartPointer<vtkPiecewiseFunction>::New();
+    gradientOpacity2->AddPoint(120, 0.0);
+    gradientOpacity2->AddPoint(150, 0.2);
+    gradientOpacity2->AddPoint(180, 0.4);
+    volumeProperty2->SetGradientOpacity(gradientOpacity2);
+    ////////////////////////////////////////////////////////  
+    vtkSmartPointer<vtkColorTransferFunction> color =
+        vtkSmartPointer<vtkColorTransferFunction>::New();
+    color->AddRGBPoint(0, 0, 0, 0);
+    color->AddRGBPoint(64, 1.0, 0.52, 0.3);
+    color->AddRGBPoint(190.0, 1.00, 1.00, 1.00);
+    color->AddRGBPoint(220.0, 0.20, 0.20, 0.20);
+    volumeProperty1->SetColor(color);
+    volumeProperty2->SetColor(color);
+    /****************************************************************/
+    vtkSmartPointer<vtkVolume> volume1 =
+        vtkSmartPointer<vtkVolume>::New();
+    volume1->SetMapper(volumeMapper1);
+    volume1->SetProperty(volumeProperty1);
+
+    vtkSmartPointer<vtkVolume> volume2 =
+        vtkSmartPointer<vtkVolume>::New();
+    volume2->SetMapper(volumeMapper2);
+    volume2->SetProperty(volumeProperty2);
+    //////////////  
+    double View1[4] = { 0, 0, 0.5, 1 };
+    double View2[4] = { 0.5, 0, 1, 1 };
+    vtkSmartPointer<vtkRenderer> render1 =
+        vtkSmartPointer<vtkRenderer>::New();
+    render1->AddVolume(volume1);
+    render1->SetViewport(View1);
+    render1->SetBackground(0, 1, 0);
+
+    vtkSmartPointer<vtkRenderer> render2 =
+        vtkSmartPointer<vtkRenderer>::New();
+    render2->AddVolume(volume2);
+    render2->SetViewport(View2);
+    render2->SetBackground(0, 1, 0);
+
+    vtkSmartPointer<vtkRenderWindow> rw =
+        vtkSmartPointer<vtkRenderWindow>::New();
+    rw->AddRenderer(render1);
+    rw->AddRenderer(render2);
+    rw->SetSize(640, 320);
+    rw->SetWindowName("Differ Gradient Opacity Function");
+
+    vtkSmartPointer<vtkRenderWindowInteractor> rwi =
+        vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    rwi->SetRenderWindow(rw);
+
+    render1->GetActiveCamera()->SetPosition(0, -1, 0);
+    render1->GetActiveCamera()->SetFocalPoint(0, 0, 0);
+    render1->GetActiveCamera()->SetViewUp(0, 0, 1);
+    render1->GetActiveCamera()->Azimuth(30);
+    render1->GetActiveCamera()->Elevation(30);
+    render1->ResetCamera();
+    render2->SetActiveCamera(render1->GetActiveCamera());
+
+    rw->Render();
+    rwi->Start();
+    return 0;
+}
+

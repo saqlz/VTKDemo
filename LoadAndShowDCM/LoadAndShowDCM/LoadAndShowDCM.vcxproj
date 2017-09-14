@@ -88,6 +88,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+    <Text Include="TestGradientOpacity.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\wisdom_tech_common_defines.h" />

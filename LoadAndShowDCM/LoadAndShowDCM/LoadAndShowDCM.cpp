@@ -29,34 +29,33 @@ int main()
     vtkSmartPointer<vtkVolumeProperty> volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
     volumeProperty->SetInterpolationTypeToLinear();
     volumeProperty->ShadeOn();  //打开或者关闭阴影测试  
-    volumeProperty->SetAmbient(0.1);   //环境光
-    volumeProperty->SetDiffuse(0.1);   //漫反射
+    volumeProperty->SetAmbient(0.4);   //环境光
+    volumeProperty->SetDiffuse(0.6);   //漫反射
     volumeProperty->SetSpecular(0.5);  //镜面反射
    
     //设置不透明度  
-    vtkSmartPointer<vtkPiecewiseFunction> compositeOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    compositeOpacity->AddPoint(70, 0.00);
-    compositeOpacity->AddPoint(90, 0.80);
-    compositeOpacity->AddPoint(180, 0.90);
-    volumeProperty->SetScalarOpacity(compositeOpacity); //设置不透明度传输函数  
-    //compositeOpacity->AddPoint(120,  0.00);//测试隐藏部分数据,对比不同的设置  
-    //compositeOpacity->AddPoint(180,  0.60);  
-    //volumeProperty->SetScalarOpacity(compositeOpacity);  
+    vtkSmartPointer<vtkPiecewiseFunction> opacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
+    opacityTransferFunction->AddPoint(-324, 0, 0.5, 0.0);
+    opacityTransferFunction->AddPoint(-16, 0, .49, .61);
+    opacityTransferFunction->AddSegment(641, .72, .5, 0.0);
+    opacityTransferFunction->AddPoint(3071, 0.0, 0.5, 0.0);
+    volumeProperty->SetScalarOpacity(opacityTransferFunction); //设置不透明度传输函数  
 
     //设置梯度不透明属性  
     vtkSmartPointer<vtkPiecewiseFunction> volumeGradientOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    volumeGradientOpacity->AddPoint(10, 0.0);
-    volumeGradientOpacity->AddPoint(90, 0.2);
-    volumeGradientOpacity->AddPoint(100, 1.0);
+    volumeGradientOpacity->AddPoint(0, 2.0);
+    volumeGradientOpacity->AddPoint(-1024, 2.0);
+    volumeGradientOpacity->AddSegment(600, 0.73, 900, 0.9);
+    volumeGradientOpacity->AddPoint(1024, 0.1);
     volumeProperty->SetGradientOpacity(volumeGradientOpacity);//设置梯度不透明度效果对比  
 
-    //设置颜色属性  
-    vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
-    color->AddRGBPoint(0.000, 0.00, 0.00, 0.00);
-    color->AddRGBPoint(64.00, 1.00, 0.52, 0.30);
-    color->AddRGBPoint(128, 1.00, 1.00, 1.00);
-    color->AddRGBPoint(256.0, 0.20, 0.20, 0.20);
-    volumeProperty->SetColor(color);
+//     //设置颜色属性  
+//     vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
+//     color->AddRGBPoint(-3024, 0, 0, 0, 0.5, 0.0);
+//     color->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
+//     color->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
+//     color->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
+//     volumeProperty->SetColor(color);
 
     vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
     volume->SetMapper(volumeMapper);
@@ -65,6 +64,7 @@ int main()
     //设置渲染的窗口，指定为vtkWin32OpenGLRenderWindow，是vtkRenderer对象的容器
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkWin32OpenGLRenderWindow>::New();
     renderWindow->SetSize(iWidth, iHeight);              //设置大小
+    renderWindow->SetAAFrames(2);
     //renderWindow->OffScreenRenderingOn();                //离屏渲染，不显示窗口
 
     //设置一个渲染的视野,一般称为ViewPort或者Cell
