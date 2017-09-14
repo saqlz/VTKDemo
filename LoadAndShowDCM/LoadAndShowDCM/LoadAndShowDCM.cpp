@@ -17,7 +17,7 @@ int main()
     v16->Update();
   
     //选择体绘制算法
-    vtkSmartPointer<vtkOpenGLProjectedTetrahedraMapper> volumeMapper = vtkSmartPointer<vtkOpenGLProjectedTetrahedraMapper>::New();
+    vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper = vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper>::New();
     volumeMapper->SetInputData(v16->GetOutput());
     //设置光线采样距离  
     //volumeMapper->SetSampleDistance(volumeMapper->GetSampleDistance()*4);  
