@@ -35,24 +35,31 @@ int main()
    
     //设置不透明度与WWWL调窗一致 
     vtkSmartPointer<vtkPiecewiseFunction> opacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    opacityTransferFunction->AddPoint(-1024, 0.0);
-    opacityTransferFunction->AddPoint(100, 0.0);
-    opacityTransferFunction->AddPoint(1250, 1.0);
+    opacityTransferFunction->AddPoint(0, 0.0);
+    opacityTransferFunction->AddPoint(55, 0.0);
+    opacityTransferFunction->AddPoint(140, 164.721 / 255);
+    opacityTransferFunction->AddPoint(305.417, 231.458 / 255);
+    opacityTransferFunction->AddPoint(602, 235.0 / 255);
+    opacityTransferFunction->AddPoint(792, 57.8 / 255);
+    opacityTransferFunction->AddPoint(1035, 0.0);
     volumeProperty->SetScalarOpacity(opacityTransferFunction); //设置不透明度传输函数  
 
     //设置梯度不透明属性  
-    vtkSmartPointer<vtkPiecewiseFunction> volumeGradientOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    volumeGradientOpacity->AddPoint(0, 1);
-    volumeGradientOpacity->AddSegment(300, 0.73, 900, 0.9);
-    volumeGradientOpacity->AddPoint(1024, 0);
-    volumeProperty->SetGradientOpacity(volumeGradientOpacity);//设置梯度不透明度效果对比  
+    //vtkSmartPointer<vtkPiecewiseFunction> volumeGradientOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
+    //volumeGradientOpacity->AddPoint(0, 1);
+    //volumeGradientOpacity->AddSegment(300, 0.73, 900, 0.9);
+    //volumeGradientOpacity->AddPoint(1024, 0);
+    //volumeProperty->SetGradientOpacity(volumeGradientOpacity);//设置梯度不透明度效果对比  
 
      //设置颜色属性  
      vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
-     color->AddRGBPoint(-3024, 0, 0, 0, 0.5, 0.0);
-     color->AddRGBPoint(-16, 0.73, 0.25, 0.30, 0.49, .61);
-     color->AddRGBPoint(641, .90, .82, .56, .5, 0.0);
-     color->AddRGBPoint(3071, 1, 1, 1, .5, 0.0);
+     color->AddRGBPoint(0, 0, 0, 0);
+     color->AddRGBPoint(55, 0, 0, 0);
+     color->AddRGBPoint(140,164.0 / 255, 102.0 / 255, 19.0 / 255);
+     color->AddRGBPoint(602, 250.0 / 255, 226.0 / 255, 110.0 / 255);
+     color->AddRGBPoint(305.417, 207.0 / 255, 164.0 / 255, 201.0 / 255);
+     color->AddRGBPoint(792, 251.0 / 255, 231.0 / 255, 210.0 / 255);
+     color->AddRGBPoint(1035, 251.0 / 255, 231.0 / 255, 219.0 / 255);
      volumeProperty->SetColor(color);
 
     vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
