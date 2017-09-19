@@ -19,6 +19,9 @@
     <Text Include="TestGradientOpacity.txt">
       <Filter>源文件</Filter>
     </Text>
+    <Text Include="TestvtkImageReslice.txt">
+      <Filter>源文件</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
