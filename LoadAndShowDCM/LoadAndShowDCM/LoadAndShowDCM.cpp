@@ -3,26 +3,160 @@
 
 #include "stdafx.h"
 
+/*=========================================================================
+
+Program:   Visualization Toolkit
+Module:    ImageSlicing.cxx
+
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+//
+// This example shows how to load a 3D image into VTK and then reformat
+// that image into a different orientation for viewing.  It uses
+// vtkImageReslice for reformatting the image, and uses vtkImageActor
+// and vtkInteractorStyleImage to display the image.  This InteractorStyle
+// forces the camera to stay perpendicular to the XY plane.
+//
+// Thanks to David Gobbi of Atamai Inc. for contributing this example.
+//
+
+#include "vtkSmartPointer.h"
+#include "vtkImageReader2.h"
+#include "vtkMatrix4x4.h"
+#include "vtkImageReslice.h"
+#include "vtkLookupTable.h"
+#include "vtkImageMapToColors.h"
+#include "vtkImageActor.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkRenderWindowInteractor.h"
+#include "vtkInteractorStyleImage.h"
+#include "vtkCommand.h"
+#include "vtkImageData.h"
+#include "vtkImageMapper3D.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkInformation.h"
+
+// The mouse motion callback, to turn "Slicing" on and off
+class vtkImageInteractionCallback : public vtkCommand
+{
+public:
+
+    static vtkImageInteractionCallback *New() {
+        return new vtkImageInteractionCallback;
+    };
+
+    vtkImageInteractionCallback() {
+        this->Slicing = 0;
+        this->ImageReslice = 0;
+        this->Interactor = 0;
+    };
+
+    void SetImageReslice(vtkImageReslice *reslice) {
+        this->ImageReslice = reslice;
+    };
+
+    vtkImageReslice *GetImageReslice() {
+        return this->ImageReslice;
+    };
+
+    void SetInteractor(vtkRenderWindowInteractor *interactor) {
+        this->Interactor = interactor;
+    };
+
+    vtkRenderWindowInteractor *GetInteractor() {
+        return this->Interactor;
+    };
+
+    void Execute(vtkObject *, unsigned long event, void *) VTK_OVERRIDE
+    {
+        vtkRenderWindowInteractor *interactor = this->GetInteractor();
+
+        int lastPos[2];
+        interactor->GetLastEventPosition(lastPos);
+        int currPos[2];
+        interactor->GetEventPosition(currPos);
+
+        if (event == vtkCommand::LeftButtonPressEvent)
+        {
+            this->Slicing = 1;
+        }
+        else if (event == vtkCommand::LeftButtonReleaseEvent)
+        {
+            this->Slicing = 0;
+        }
+        else if (event == vtkCommand::MouseMoveEvent)
+        {
+            if (this->Slicing)
+            {
+                vtkImageReslice *reslice = this->ImageReslice;
+
+                // Increment slice position by deltaY of mouse
+                int deltaY = lastPos[1] - currPos[1];
+
+                reslice->Update();
+                double sliceSpacing = reslice->GetOutput()->GetSpacing()[2];
+                vtkMatrix4x4 *matrix = reslice->GetResliceAxes();
+                // move the center point that we are slicing through
+                double point[4];
+                double center[4];
+                point[0] = 0.0;
+                point[1] = 0.0;
+                point[2] = sliceSpacing * deltaY;
+                point[3] = 1.0;
+                matrix->MultiplyPoint(point, center);
+                matrix->SetElement(0, 3, center[0]);
+                matrix->SetElement(1, 3, center[1]);
+                matrix->SetElement(2, 3, center[2]);
+                interactor->Render();
+            }
+            else
+            {
+                vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
+                    interactor->GetInteractorStyle());
+                if (style)
+                {
+                    style->OnMouseMove();
+                }
+            }
+        }
+    };
+
+private:
+
+    // Actions (slicing only, for now)
+    int Slicing;
+
+    // Pointer to vtkImageReslice
+    vtkImageReslice *ImageReslice;
+
+    // Pointer to the interactor
+    vtkRenderWindowInteractor *Interactor;
+};
+
+// The program entry point
 int main()
 {
-    std::string sPath = "E:\\Images\\Test\\";
-    int iWidth = 640;
-    int iHeight = 480;
-
     //Step0. 加Load DICOM Data
     //Step0. 加载DIOCM原始数据
+    std::string sPath = "E:\\Images\\Test\\";
     vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
     reader->SetDataByteOrderToLittleEndian();
     reader->SetDirectoryName(sPath.c_str());
     reader->Update();
-
-
-    int* extent;
+    int extent[6];
     double spacing[3];
     double origin[3];
 
 
-    extent = reader->GetDataExtent();
+    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
     reader->GetOutput()->GetSpacing(spacing);
     reader->GetOutput()->GetOrigin(origin);
 
@@ -30,127 +164,114 @@ int main()
     center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
     center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
     center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
+
+    // Matrices for axial, coronal, sagittal, oblique view orientations
+    //static double axialElements[16] = {
+    //         1, 0, 0, 0,
+    //         0, 1, 0, 0,
+    //         0, 0, 1, 0,
+    //         0, 0, 0, 1 };
+
+    //static double coronalElements[16] = {
+    //         1, 0, 0, 0,
+    //         0, 0, 1, 0,
+    //         0,-1, 0, 0,
+    //         0, 0, 0, 1 };
+
     static double sagittalElements[16] = {
         0, 0,-1, 0,
         1, 0, 0, 0,
         0,-1, 0, 0,
         0, 0, 0, 1 };
 
-    vtkSmartPointer<vtkMatrix4x4> resliceAxes =  vtkSmartPointer<vtkMatrix4x4>::New();
+    //static double obliqueElements[16] = {
+    //         1, 0, 0, 0,
+    //         0, 0.866025, -0.5, 0,
+    //         0, 0.5, 0.866025, 0,
+    //         0, 0, 0, 1 };
+
+    // Set the slice orientation
+    vtkSmartPointer<vtkMatrix4x4> resliceAxes =
+        vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxes->DeepCopy(sagittalElements);
     // Set the point through which to slice
     resliceAxes->SetElement(0, 3, center[0]);
     resliceAxes->SetElement(1, 3, center[1]);
     resliceAxes->SetElement(2, 3, center[2]);
 
-    vtkSmartPointer<vtkImageReslice> reslice = vtkSmartPointer<vtkImageReslice>::New();
+    // Extract a slice in the desired orientation
+    vtkSmartPointer<vtkImageReslice> reslice =
+        vtkSmartPointer<vtkImageReslice>::New();
     reslice->SetInputConnection(reader->GetOutputPort());
-    reslice->SetOutputDimensionality(3);
+    reslice->SetOutputDimensionality(2);
     reslice->SetResliceAxes(resliceAxes);
     reslice->SetInterpolationModeToLinear();
-    
+
+    // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> table =
         vtkSmartPointer<vtkLookupTable>::New();
-    table->SetRange(-1024, 3000);        // image intensity range
-    table->SetValueRange(0.0, 1.0);      // from black to white
+    table->SetRange(0, 150); // image intensity range
+    table->SetValueRange(1.0, 0.0); // from black to white
     table->SetSaturationRange(0.0, 0.0); // no color saturation
     table->SetRampToLinear();
     table->Build();
 
-
     // Map the image through the lookup table
-    vtkSmartPointer<vtkImageMapToColors> color1 =
+    vtkSmartPointer<vtkImageMapToColors> color =
         vtkSmartPointer<vtkImageMapToColors>::New();
-    color1->SetLookupTable(table);
-    color1->SetInputConnection(reslice->GetOutputPort());
+    color->SetLookupTable(table);
+    color->SetInputConnection(reslice->GetOutputPort());
 
-
-
-    vtkSmartPointer<vtkImageActor> imageActor =
+    // Display the image
+    vtkSmartPointer<vtkImageActor> actor =
         vtkSmartPointer<vtkImageActor>::New();
-    imageActor->GetMapper()->SetInputConnection(color1->GetOutputPort());
+    actor->GetMapper()->SetInputConnection(color->GetOutputPort());
 
-    
-    //选择体绘制算法
-    vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper> volumeMapper = vtkSmartPointer<vtkOpenGLGPUVolumeRayCastMapper>::New();
-    volumeMapper->SetInputData(reader->GetOutput());
-    //设置光线采样距离  
-    //volumeMapper->SetSampleDistance(volumeMapper->GetSampleDistance()*4);  
-    //设置图像采样步长  
-    //volumeMapper->SetAutoAdjustSampleDistances(0);  
-    //volumeMapper->SetImageSampleDistance(4);  
-    /*************************************************************************/
+    vtkSmartPointer<vtkRenderer> renderer =
+        vtkSmartPointer<vtkRenderer>::New();
+    renderer->AddActor(actor);
 
-    vtkSmartPointer<vtkVolumeProperty> volumeProperty = vtkSmartPointer<vtkVolumeProperty>::New();
-    volumeProperty->SetInterpolationTypeToLinear();
-    volumeProperty->ShadeOn();  //打开或者关闭阴影测试  
-    volumeProperty->SetAmbient(0.4);   //环境光
-    volumeProperty->SetDiffuse(0.6);   //漫反射
-    volumeProperty->SetSpecular(0.5);  //镜面反射
 
-                                       //设置不透明度与WWWL调窗一致 
-    vtkSmartPointer<vtkPiecewiseFunction> opacityTransferFunction = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    opacityTransferFunction->AddPoint(0, 0.0);
-    opacityTransferFunction->AddPoint(55, 0.0);
-    opacityTransferFunction->AddPoint(140, 164.721 / 255);
-    opacityTransferFunction->AddPoint(305.417, 231.458 / 255);
-    opacityTransferFunction->AddPoint(602, 235.0 / 255);
-    opacityTransferFunction->AddPoint(792, 57.8 / 255);
-    opacityTransferFunction->AddPoint(1035, 0.0);
-    volumeProperty->SetScalarOpacity(opacityTransferFunction); //设置不透明度传输函数  
-
-    //设置梯度不透明属性  
-    //vtkSmartPointer<vtkPiecewiseFunction> volumeGradientOpacity = vtkSmartPointer<vtkPiecewiseFunction>::New();
-    //volumeGradientOpacity->AddPoint(0, 1);
-    //volumeGradientOpacity->AddSegment(300, 0.73, 900, 0.9);
-    //volumeGradientOpacity->AddPoint(1024, 0);
-    //volumeProperty->SetGradientOpacity(volumeGradientOpacity);//设置梯度不透明度效果对比  
-
-    //设置颜色属性  
-    vtkSmartPointer<vtkColorTransferFunction> color = vtkSmartPointer<vtkColorTransferFunction>::New();
-    color->AddRGBPoint(0, 0, 0, 0);
-    color->AddRGBPoint(55, 0, 0, 0);
-    color->AddRGBPoint(140, 164.0 / 255, 102.0 / 255, 19.0 / 255);
-    color->AddRGBPoint(602, 250.0 / 255, 226.0 / 255, 110.0 / 255);
-    color->AddRGBPoint(305.417, 207.0 / 255, 164.0 / 255, 201.0 / 255);
-    color->AddRGBPoint(792, 251.0 / 255, 231.0 / 255, 210.0 / 255);
-    color->AddRGBPoint(1035, 251.0 / 255, 231.0 / 255, 219.0 / 255);
-    volumeProperty->SetColor(color);
-
-    vtkSmartPointer<vtkVolume> volume = vtkSmartPointer<vtkVolume>::New();
-    volume->SetMapper(volumeMapper);
-    volume->SetProperty(volumeProperty);
-    
-    //设置渲染的窗口，指定为vtkWin32OpenGLRenderWindow，是vtkRenderer对象的容器
-    vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkWin32OpenGLRenderWindow>::New();
-    renderWindow->SetSize(iWidth, iHeight);              //设置大小
-    renderWindow->SetAAFrames(2);
-    //renderWindow->OffScreenRenderingOn();                //离屏渲染，不显示窗口
-
-    //设置一个渲染的视野,一般称为ViewPort或者Cell
-    //作用记录图像三维信息转换，聚合其他元素，比如照相机
-    vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-    renderWindow->AddRenderer(renderer);                //注意一个vtkRenderWindow只能聚合一个vtkRenderer对象
-
-    //设置照相机方位和位置
-    vtkSmartPointer<vtkCamera> aCamera = vtkSmartPointer<vtkCamera>::New();
-    /*aCamera->SetViewUp(0, 0, -1);
-    aCamera->SetPosition(0, 1, 0);
-    aCamera->SetFocalPoint(0, 0, 0);
-    aCamera->ComputeViewPlaneNormal();
-    aCamera->Azimuth(30.0);
-    aCamera->Elevation(30.0);*/
-
-    renderer->SetBackground(0, 0, 0);                   //设置背景为黑色
-    renderer->AddVolume(volume);                        //数据源
-    renderer->AddActor(imageActor);
-
-    renderer->SetActiveCamera(aCamera);                 //相机
+    vtkCamera *aCamera = vtkCamera::New();
+    aCamera->SetViewUp(0, 1,0);
+    aCamera->SetPosition(0, 0, 1);
+    aCamera->SetFocalPoint(origin[0], origin[1], origin[2]);
+  //  aCamera->ComputeProjectionTransform(30, origin[0], origin[0] + 36);
+    // Actors are added to the renderer. An initial camera view is created.
+    // The Dolly() method moves the camera towards the FocalPoint,
+    // thereby enlarging the image.
+    renderer->SetActiveCamera(aCamera);
     renderer->ResetCamera();
-    renderWindow->Render();                             //渲染，此时已经渲染出来了
-    vtkSmartPointer<vtkRenderWindowInteractor> rwi = vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    rwi->SetRenderWindow(renderWindow);
-    rwi->Start();
-    return 0;
+    aCamera->Dolly(1.5);
+
+
+    vtkSmartPointer<vtkRenderWindow> window =
+        vtkSmartPointer<vtkRenderWindow>::New();
+    window->AddRenderer(renderer);
+    window->SetSize(800, 800);
+    
+    // Set up the interaction
+    vtkSmartPointer<vtkInteractorStyleImage> imageStyle =
+        vtkSmartPointer<vtkInteractorStyleImage>::New();
+    vtkSmartPointer<vtkRenderWindowInteractor> interactor =
+        vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    interactor->SetInteractorStyle(imageStyle);
+    window->SetInteractor(interactor);
+    window->Render();
+
+    vtkSmartPointer<vtkImageInteractionCallback> callback =
+        vtkSmartPointer<vtkImageInteractionCallback>::New();
+    callback->SetImageReslice(reslice);
+    callback->SetInteractor(interactor);
+
+    imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
+    imageStyle->AddObserver(vtkCommand::LeftButtonPressEvent, callback);
+    imageStyle->AddObserver(vtkCommand::LeftButtonReleaseEvent, callback);
+
+    // Start interaction
+    // The Start() method doesn't return until the window is closed by the user
+    interactor->Start();
+
+    return EXIT_SUCCESS;
 }
 

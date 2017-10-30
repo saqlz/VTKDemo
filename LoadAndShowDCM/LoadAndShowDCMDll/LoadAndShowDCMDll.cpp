@@ -61,7 +61,7 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const char* sPath, const i
     //设置渲染的窗口，指定为vtkWin32OpenGLRenderWindow，是vtkRenderer对象的容器
     vtkSmartPointer<vtkRenderWindow> renderWindow = vtkSmartPointer<vtkWin32OpenGLRenderWindow>::New();
     renderWindow->SetSize(iWidth, iHeight);              //设置大小
-    renderWindow->OffScreenRenderingOn();                //离屏渲染，不显示窗口
+  //  renderWindow->OffScreenRenderingOn();                //离屏渲染，不显示窗口
 
     //设置一个渲染的视野,一般称为ViewPort或者Cell
     //作用记录图像三维信息转换，聚合其他元素，比如照相机
@@ -92,9 +92,14 @@ int WisdomTechLoadAndShowDCM::LoadAndShowByPathAndDim(const char* sPath, const i
     int* imageDimension = imageData->GetDimensions();
     int component = imageData->GetNumberOfScalarComponents();
 
-    std::string host = "127.0.0.1";
+     std::string host = "127.0.0.1";
     vtkSmartPointer<vtkClientSocket> socketCommunicator = vtkSmartPointer<vtkClientSocket>::New();
     socketCommunicator->ConnectToServer(host.c_str(), 20000);
+
+    int t1 = imageDimension[0];
+    int t2 = imageDimension[1];
+    int t3 = imageDimension[2];
+    std::cout << t1 << t2 << t3 << std::endl;
     socketCommunicator->Send(image, imageDimension[0] * imageDimension[1] * component);
 
     return 0;

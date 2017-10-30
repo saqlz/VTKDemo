@@ -35,7 +35,7 @@ namespace TestLoadAndShowDCM
             var width = Convert.ToInt32(TestLoadAndShowCanvas.ActualWidth);
             var height = Convert.ToInt32(TestLoadAndShowCanvas.ActualHeight);
             var path = this.ITextBoxForPath.Text;
-            int flag = NativeMethods.LoadAndShowByPathAndDim(new StringBuilder(path), width, height);
+            int flag = NativeMethods.LoadAndShowByPathAndDim(new StringBuilder(path), 145, 146);
             if (0 == flag)
             {
                 Thread.Sleep(500);
