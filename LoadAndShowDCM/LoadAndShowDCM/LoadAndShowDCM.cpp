@@ -205,13 +205,13 @@ int main()
     reslice->SetInputConnection(reader->GetOutputPort());
     reslice->SetOutputDimensionality(2);
     reslice->SetResliceAxes(resliceAxes);
-    reslice->SetInterpolationModeToLinear();
+    reslice->SetInterpolationModeToCubic();
 
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> table =
         vtkSmartPointer<vtkLookupTable>::New();
-    table->SetRange(0, 150); // image intensity range
-    table->SetValueRange(1.0, 0.0); // from black to white
+    table->SetRange(0, 2000); // image intensity range
+    table->SetValueRange(0.0, 1.0); // from black to white
     table->SetSaturationRange(0.0, 0.0); // no color saturation
     table->SetRampToLinear();
     table->Build();
@@ -231,25 +231,10 @@ int main()
         vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actor);
 
-
-    vtkCamera *aCamera = vtkCamera::New();
-    aCamera->SetViewUp(0, 1,0);
-    aCamera->SetPosition(0, 0, 1);
-    aCamera->SetFocalPoint(origin[0], origin[1], origin[2]);
-  //  aCamera->ComputeProjectionTransform(30, origin[0], origin[0] + 36);
-    // Actors are added to the renderer. An initial camera view is created.
-    // The Dolly() method moves the camera towards the FocalPoint,
-    // thereby enlarging the image.
-    renderer->SetActiveCamera(aCamera);
-    renderer->ResetCamera();
-    aCamera->Dolly(1.5);
-
-
     vtkSmartPointer<vtkRenderWindow> window =
         vtkSmartPointer<vtkRenderWindow>::New();
     window->AddRenderer(renderer);
-    window->SetSize(800, 800);
-    
+
     // Set up the interaction
     vtkSmartPointer<vtkInteractorStyleImage> imageStyle =
         vtkSmartPointer<vtkInteractorStyleImage>::New();
