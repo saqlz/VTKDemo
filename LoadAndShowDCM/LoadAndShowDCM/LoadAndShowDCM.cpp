@@ -153,7 +153,7 @@ int main()
     cbk->Delete();
 
     vtkImageMapToColors *colorMap1 = vtkImageMapToColors::New();
-    colorMap1->PassAlphaToOutputOff(); //use in RGBA
+    //colorMap1->PassAlphaToOutputOff(); //use in RGBA
     colorMap1->SetActiveComponent(0);
     colorMap1->SetOutputFormatToLuminance();
     colorMap1->SetInputData((vtkDataSet*)planeWidgetX->GetResliceOutput());
