@@ -3,207 +3,260 @@
 
 #include "stdafx.h"
 
-#include "vtkDICOMImageReader.h"
-#include "vtkOutlineFilter.h"
-#include "vtkPolyDataMapper.h"
-#include "vtkActor.h"
+/*=========================================================================
+
+Program:   Visualization Toolkit
+Module:    ImageSlicing.cxx
+
+Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
+All rights reserved.
+See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
+
+This software is distributed WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+PURPOSE.  See the above copyright notice for more information.
+
+=========================================================================*/
+//
+// This example shows how to load a 3D image into VTK and then reformat
+// that image into a different orientation for viewing.  It uses
+// vtkImageReslice for reformatting the image, and uses vtkImageActor
+// and vtkInteractorStyleImage to display the image.  This InteractorStyle
+// forces the camera to stay perpendicular to the XY plane.
+//
+// Thanks to David Gobbi of Atamai Inc. for contributing this example.
+//
+
+#include "vtkSmartPointer.h"
+#include "vtkImageReader2.h"
+#include "vtkMatrix4x4.h"
+#include "vtkImageReslice.h"
+#include "vtkLookupTable.h"
+#include "vtkImageMapToColors.h"
+#include "vtkImageActor.h"
 #include "vtkRenderer.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
-#include "vtkImagePlaneWidget.h"
-#include "vtkCellPicker.h"
-#include "vtkProperty.h"
-#include "vtkImageMapToColors.h"
-#include "vtkImageActor.h"
-#include "vtkCamera.h"
+#include "vtkInteractorStyleImage.h"
 #include "vtkCommand.h"
-#include "vtkJPEGReader.h"
-class vtkWidgetWindowLevelCallback : public vtkCommand
+#include "vtkImageData.h"
+#include "vtkImageMapper3D.h"
+#include "vtkStreamingDemandDrivenPipeline.h"
+#include "vtkInformation.h"
+
+// The mouse motion callback, to turn "Slicing" on and off
+class vtkImageInteractionCallback : public vtkCommand
 {
 public:
-    static vtkWidgetWindowLevelCallback *New()
+
+    static vtkImageInteractionCallback *New() {
+        return new vtkImageInteractionCallback;
+    };
+
+    vtkImageInteractionCallback() {
+        this->Slicing = 0;
+        this->ImageReslice = 0;
+        this->Interactor = 0;
+    };
+
+    void SetImageReslice(vtkImageReslice *reslice) {
+        this->ImageReslice = reslice;
+    };
+
+    vtkImageReslice *GetImageReslice() {
+        return this->ImageReslice;
+    };
+
+    void SetInteractor(vtkRenderWindowInteractor *interactor) {
+        this->Interactor = interactor;
+    };
+
+    vtkRenderWindowInteractor *GetInteractor() {
+        return this->Interactor;
+    };
+
+    void Execute(vtkObject *, unsigned long event, void *) VTK_OVERRIDE
     {
-        return new vtkWidgetWindowLevelCallback;
-    }
+        vtkRenderWindowInteractor *interactor = this->GetInteractor();
 
-    void Execute(vtkObject *caller, unsigned long vtkNotUsed(event),
-        void *callData)
-    {
-        vtkImagePlaneWidget* self =
-            reinterpret_cast< vtkImagePlaneWidget* >(caller);
-        if (!self) return;
+        int lastPos[2];
+        interactor->GetLastEventPosition(lastPos);
+        int currPos[2];
+        interactor->GetEventPosition(currPos);
 
-        double* wl = static_cast<double*>(callData);
-
-        if (self == this->WidgetX)
+        if (event == vtkCommand::LeftButtonPressEvent)
         {
-            this->WidgetY->SetWindowLevel(wl[0], wl[1]);
-            this->WidgetZ->SetWindowLevel(wl[0], wl[1]);
+            this->Slicing = 1;
         }
-        else if (self == this->WidgetY)
+        else if (event == vtkCommand::LeftButtonReleaseEvent)
         {
-            this->WidgetX->SetWindowLevel(wl[0], wl[1]);
-            this->WidgetZ->SetWindowLevel(wl[0], wl[1]);
+            this->Slicing = 0;
         }
-        else if (self == this->WidgetZ)
+        else if (event == vtkCommand::MouseMoveEvent)
         {
-            this->WidgetX->SetWindowLevel(wl[0], wl[1]);
-            this->WidgetY->SetWindowLevel(wl[0], wl[1]);
+            if (this->Slicing)
+            {
+                vtkImageReslice *reslice = this->ImageReslice;
+
+                // Increment slice position by deltaY of mouse
+                int deltaY = lastPos[1] - currPos[1];
+
+                reslice->Update();
+                double sliceSpacing = reslice->GetOutput()->GetSpacing()[2];
+                vtkMatrix4x4 *matrix = reslice->GetResliceAxes();
+                // move the center point that we are slicing through
+                double point[4];
+                double center[4];
+                point[0] = 0.0;
+                point[1] = 0.0;
+                point[2] = sliceSpacing * deltaY;
+                point[3] = 1.0;
+                matrix->MultiplyPoint(point, center);
+                matrix->SetElement(0, 3, center[0]);
+                matrix->SetElement(1, 3, center[1]);
+                matrix->SetElement(2, 3, center[2]);
+                interactor->Render();
+            }
+            else
+            {
+                vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
+                    interactor->GetInteractorStyle());
+                if (style)
+                {
+                    style->OnMouseMove();
+                }
+            }
         }
-    }
+    };
 
-    vtkWidgetWindowLevelCallback() :WidgetX(0), WidgetY(0), WidgetZ(0) {}
+private:
 
-    vtkImagePlaneWidget* WidgetX;
-    vtkImagePlaneWidget* WidgetY;
-    vtkImagePlaneWidget* WidgetZ;
+    // Actions (slicing only, for now)
+    int Slicing;
+
+    // Pointer to vtkImageReslice
+    vtkImageReslice *ImageReslice;
+
+    // Pointer to the interactor
+    vtkRenderWindowInteractor *Interactor;
 };
 
+// The program entry point
 int main()
 {
-    vtkDICOMImageReader *DicomReader = vtkDICOMImageReader::New();
-    DicomReader->SetDataByteOrderToLittleEndian();
-    DicomReader->SetDirectoryName("E:\\Images\\Test\\");
-    DicomReader->Update();
-    vtkOutlineFilter *DicomOutline = vtkOutlineFilter::New();
-    DicomOutline->SetInputConnection(DicomReader->GetOutputPort());
-    vtkPolyDataMapper *DicomMapper = vtkPolyDataMapper::New();
-    DicomMapper->SetInputConnection(DicomOutline->GetOutputPort());
-    vtkActor *DicomActor = vtkActor::New();
-    DicomActor->SetMapper(DicomMapper);
-
-    vtkRenderWindow *renWin = vtkRenderWindow::New();
-    vtkRenderer *ren = vtkRenderer::New();
-    vtkRenderer *ren1 = vtkRenderer::New();
-    vtkRenderer *ren2 = vtkRenderer::New();
-    vtkRenderer *ren3 = vtkRenderer::New();
-    vtkRenderWindowInteractor *iren = vtkRenderWindowInteractor::New();
-    renWin->AddRenderer(ren1);
-    renWin->AddRenderer(ren2);
-    renWin->AddRenderer(ren3);
-    renWin->AddRenderer(ren);
-    iren->SetRenderWindow(renWin);
-    //        ren->AddActor( DicomActor );
-
-    vtkCellPicker * picker = vtkCellPicker::New();
-    picker->SetTolerance(0.005);
-
-    vtkImagePlaneWidget * planeWidgetX = vtkImagePlaneWidget::New();
-    planeWidgetX->SetInteractor(iren);
-    planeWidgetX->SetKeyPressActivationValue('x');
-    planeWidgetX->SetPicker(picker);
-    planeWidgetX->RestrictPlaneToVolumeOn();
-    planeWidgetX->GetPlaneProperty()->SetColor(0.0, 0.0, 1.0);
-    planeWidgetX->DisplayTextOn();
-    //planeWidgetX->TextureInterpolateOn();
-    planeWidgetX->TextureInterpolateOff();
-    planeWidgetX->SetResliceInterpolateToLinear();
-    planeWidgetX->SetInputData((vtkDataSet*)DicomReader->GetOutput());
-    planeWidgetX->SetPlaneOrientationToXAxes();//??
-    planeWidgetX->SetSliceIndex(255);
-    planeWidgetX->GetTexturePlaneProperty()->SetOpacity(1);
-    planeWidgetX->On();
+    //Step0. 加Load DICOM Data
+    //Step0. 加载DIOCM原始数据
+    std::string sPath = "E:\\Images\\Test\\";
+    vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    reader->SetDataByteOrderToLittleEndian();
+    reader->SetDirectoryName(sPath.c_str());
+    reader->Update();
+    int extent[6];
+    double spacing[3];
+    double origin[3];
 
 
-    vtkImagePlaneWidget * planeWidgetY = vtkImagePlaneWidget::New();
-    planeWidgetY->SetInteractor(iren);
-    planeWidgetY->SetKeyPressActivationValue('y');
-    planeWidgetY->SetPicker(picker);
-    planeWidgetY->RestrictPlaneToVolumeOn();
-    planeWidgetY->GetPlaneProperty()->SetColor(1.0, 0.0, 0.0);
-    planeWidgetY->DisplayTextOn();
-    planeWidgetY->TextureInterpolateOn();
-    planeWidgetY->SetResliceInterpolateToLinear();
-    planeWidgetY->SetInputData((vtkDataSet*)DicomReader->GetOutput());
-    planeWidgetY->SetPlaneOrientationToYAxes();//??
-    planeWidgetY->SetSliceIndex(255);
-    planeWidgetY->On();
+    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+    reader->GetOutput()->GetSpacing(spacing);
+    reader->GetOutput()->GetOrigin(origin);
 
-    vtkImagePlaneWidget * planeWidgetZ = vtkImagePlaneWidget::New();
-    planeWidgetZ->SetInteractor(iren);
-    planeWidgetZ->DisplayTextOn();
-    planeWidgetZ->RestrictPlaneToVolumeOn();
-    planeWidgetZ->SetKeyPressActivationValue('z');
-    planeWidgetZ->SetPicker(picker);
-    planeWidgetZ->GetPlaneProperty()->SetColor(0.0, 1.0, 0.0);
-    planeWidgetZ->TextureInterpolateOn();
-    planeWidgetZ->SetResliceInterpolateToLinear();
-    planeWidgetZ->SetInputData((vtkDataSet*)DicomReader->GetOutput());
-    planeWidgetZ->SetPlaneOrientationToZAxes(); //?á????
-    planeWidgetZ->SetSliceIndex(150);
+    double center[3];
+    center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
+    center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
+    center[2] = origin[2] + spacing[2] * 1.0 * (extent[4] + extent[5]);
 
-    planeWidgetZ->On();
-    /*        vtkImagePlaneWidget *planeWidgetZ = vtkImagePlaneWidget::New();
-    planeWidgetZ->SetInteractor( iren );
-    planeWidgetZ->SetKeyPressActivationValue( 'z' );
-    planeWidgetZ->DisplayTextOn();
-    planeWidgetZ->SetPicker( picker );
-    planeWidgetZ->GetPlaneProperty()->SetColor( 1.0, 0.0, 0.0 );
-    planeWidgetZ->TextureInterpolateOn();
-    planeWidgetZ->SetResliceInterpolateToCubic();
-    planeWidgetZ->SetInput( (vtkDataSet*)DicomReader->GetOutput() );
-    planeWidgetZ->SetPlaneOrientationToZAxes();
-    planeWidgetZ->SetSliceIndex( 183 );
-    planeWidgetZ->On();*/
+    // Matrices for axial, coronal, sagittal, oblique view orientations
+    //static double axialElements[16] = {
+    //         1, 0, 0, 0,
+    //         0, 1, 0, 0,
+    //         0, 0, 1, 0,
+    //         0, 0, 0, 1 };
 
-    vtkWidgetWindowLevelCallback* cbk = vtkWidgetWindowLevelCallback::New();
-    cbk->WidgetX = planeWidgetX;
-    cbk->WidgetY = planeWidgetY;
-    cbk->WidgetZ = planeWidgetZ;
-    cbk->Delete();
+    //static double coronalElements[16] = {
+    //         1, 0, 0, 0,
+    //         0, 0, 1, 0,
+    //         0,-1, 0, 0,
+    //         0, 0, 0, 1 };
 
-    vtkImageMapToColors *colorMap1 = vtkImageMapToColors::New();
-    //colorMap1->PassAlphaToOutputOff(); //use in RGBA
-    colorMap1->SetActiveComponent(0);
-    colorMap1->SetOutputFormatToLuminance();
-    colorMap1->SetInputData((vtkDataSet*)planeWidgetX->GetResliceOutput());
-    colorMap1->SetLookupTable((vtkScalarsToColors *)planeWidgetX->GetLookupTable());
-    vtkImageActor * imageActor1 = vtkImageActor::New();
-    imageActor1->PickableOff();
-    imageActor1->SetInputData(colorMap1->GetOutput());
+    static double sagittalElements[16] = {
+        1, 0,0, 0,
+        0, 1, 0, 0,
+        0,0, 1, 0,
+        0, 0, 0, 1 };
 
-    vtkImageMapToColors *colorMap2 = vtkImageMapToColors::New();
-    colorMap2->PassAlphaToOutputOff();
-    colorMap2->SetActiveComponent(0); // for muti-component
-    colorMap2->SetOutputFormatToLuminance();
-    colorMap2->SetInputData((vtkDataSet*)planeWidgetY->GetResliceOutput());
-    colorMap2->SetLookupTable((vtkScalarsToColors *)planeWidgetX->GetLookupTable());
-    vtkImageActor * imageActor2 = vtkImageActor::New();
-    imageActor2->PickableOff();
-    imageActor2->SetInputData(colorMap2->GetOutput());
+    //static double obliqueElements[16] = {
+    //         1, 0, 0, 0,
+    //         0, 0.866025, -0.5, 0,
+    //         0, 0.5, 0.866025, 0,
+    //         0, 0, 0, 1 };
 
-    vtkImageMapToColors *colorMap3 = vtkImageMapToColors::New();
-    colorMap3->PassAlphaToOutputOff();
-    colorMap3->SetActiveComponent(0);
-    colorMap3->SetOutputFormatToLuminance();
-    colorMap3->SetInputData((vtkDataSet*)planeWidgetZ->GetResliceOutput());
-    colorMap3->SetLookupTable((vtkScalarsToColors *)planeWidgetX->GetLookupTable());
-    //colorMap3->SetLookupTable(planeWidgetX->GetLookupTable());
-    vtkImageActor *imageActor3 = vtkImageActor::New();
-    imageActor3->PickableOff();
-    imageActor3->SetInputData(colorMap3->GetOutput());
+    // Set the slice orientation
+    vtkSmartPointer<vtkMatrix4x4> resliceAxes =
+        vtkSmartPointer<vtkMatrix4x4>::New();
+    resliceAxes->DeepCopy(sagittalElements);
+    // Set the point through which to slice
+    resliceAxes->SetElement(0, 3, center[0]);
+    resliceAxes->SetElement(1, 3, center[1]);
+    resliceAxes->SetElement(2, 3, center[2]);
 
-    ren->AddActor(DicomActor); //outline
-    ren1->AddActor(imageActor1);
-    ren2->AddActor(imageActor2);
-    ren3->AddActor(imageActor3);
+    // Extract a slice in the desired orientation
+    vtkSmartPointer<vtkImageReslice> reslice =
+        vtkSmartPointer<vtkImageReslice>::New();
+    reslice->SetInputConnection(reader->GetOutputPort());
+    reslice->SetOutputDimensionality(2);
+    reslice->SetResliceAxes(resliceAxes);
+    reslice->SetInterpolationModeToLinear();
 
-    // OK
-    ren->SetBackground(0.3, 0.3, 0.6);
-    ren1->SetBackground(1.0, 0.0, 0.0);
-    ren2->SetBackground(0.0, 1.0, 0.0);
-    ren3->SetBackground(0.0, 0.0, 1.0);
-    renWin->SetSize(600, 400);
-    ren->SetViewport(0, 0.5, 0.5, 1);
-    ren1->SetViewport(0.5, 0.5, 1, 1);
-    ren2->SetViewport(0, 0, 0.5, 0.5);
-    ren3->SetViewport(0.5, 0, 1, 0.5);
+    // Create a greyscale lookup table
+    vtkSmartPointer<vtkLookupTable> table =
+        vtkSmartPointer<vtkLookupTable>::New();
+    table->SetRange(-325, 200); // image intensity range
+    table->SetValueRange(0.0, 1.0); // from black to white
+    table->SetSaturationRange(0.0, 0.0); // no color saturation
+    table->SetRampToLinear();
+    table->Build();
 
+    // Map the image through the lookup table
+    vtkSmartPointer<vtkImageMapToColors> color =
+        vtkSmartPointer<vtkImageMapToColors>::New();
+    color->SetLookupTable(table);
+    color->SetInputConnection(reslice->GetOutputPort());
 
+    // Display the image
+    vtkSmartPointer<vtkImageActor> actor =
+        vtkSmartPointer<vtkImageActor>::New();
+    actor->GetMapper()->SetInputConnection(color->GetOutputPort());
 
-    iren->Initialize();
-    iren->Start();
-    renWin->Render();
+    vtkSmartPointer<vtkRenderer> renderer =
+        vtkSmartPointer<vtkRenderer>::New();
+    renderer->AddActor(actor);
 
-    return 0;
+    vtkSmartPointer<vtkRenderWindow> window =
+        vtkSmartPointer<vtkRenderWindow>::New();
+    window->AddRenderer(renderer);
+
+    // Set up the interaction
+    vtkSmartPointer<vtkInteractorStyleImage> imageStyle =
+        vtkSmartPointer<vtkInteractorStyleImage>::New();
+    vtkSmartPointer<vtkRenderWindowInteractor> interactor =
+        vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    interactor->SetInteractorStyle(imageStyle);
+    window->SetInteractor(interactor);
+    window->Render();
+
+    vtkSmartPointer<vtkImageInteractionCallback> callback =
+        vtkSmartPointer<vtkImageInteractionCallback>::New();
+    callback->SetImageReslice(reslice);
+    callback->SetInteractor(interactor);
+
+    imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
+    imageStyle->AddObserver(vtkCommand::LeftButtonPressEvent, callback);
+    imageStyle->AddObserver(vtkCommand::LeftButtonReleaseEvent, callback);
+
+    // Start interaction
+    // The Start() method doesn't return until the window is closed by the user
+    interactor->Start();
+
+    return EXIT_SUCCESS;
 }
+
