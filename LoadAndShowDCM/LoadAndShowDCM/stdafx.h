@@ -55,6 +55,7 @@
 #include "vtkProperty.h"
 #include "vtkImageReslice.h"
 #include "vtkMatrix4x4.h" 
+#include "vtkImageBlend.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);

@@ -44,6 +44,26 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkInformation.h"
 
+namespace
+{
+    template<typename T>
+    T* LoadRawVolume(int(&iDim)[3], const std::string &strPath)
+    {
+        std::ifstream in(strPath, std::ios::binary | std::ios::in);
+        if (!in.is_open())
+        {
+            std::cout << "Can't open file : " << strPath << std::endl;
+            return nullptr;
+        }
+
+        T* pData = new T[4 * iDim[0] * iDim[1] * iDim[2]];
+        in.read((char*)pData, 4 * iDim[0] * iDim[1] * iDim[2] * sizeof(T));
+        in.close();
+
+        return pData;
+    }
+}
+
 // The mouse motion callback, to turn "Slicing" on and off
 class vtkImageInteractionCallback : public vtkCommand
 {
@@ -141,59 +161,43 @@ private:
     vtkRenderWindowInteractor *Interactor;
 };
 
+
+
 // The program entry point
 int main()
 {
-    //Step0. 加Load DICOM Data
-    //Step0. 加载DIOCM原始数据
-    std::string sPath = "E:\\Images\\Test\\";
-    vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDataByteOrderToLittleEndian();
-    reader->SetDirectoryName(sPath.c_str());
-    reader->Update();
-    int extent[6];
-    double spacing[3];
-    double origin[3];
+    std::cout << sizeof(float) << std::endl;
+    std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.dat";
+    int iVolumeDimension[3] = {150, 138, 1};
+    int iComponent = 4;
+    unsigned char* imageData = LoadRawVolume<unsigned char>(iVolumeDimension, fDoseFilePath);
+    vtkSmartPointer<vtkImageData> doseImageData = vtkSmartPointer<vtkImageData>::New();
+    doseImageData->SetDimensions(iVolumeDimension);
+    doseImageData->AllocateScalars(VTK_UNSIGNED_CHAR, iComponent);
+    unsigned char* ptr = reinterpret_cast<unsigned char*>(doseImageData->GetScalarPointer());
+    for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i+= iComponent)
+    {
+        //std::cout << 22 << imageData[i] << imageData[i + 1] << imageData[i + 2] << imageData[i + 3] << std::endl;
+        ptr[i] = imageData[i + 75* 4];
+        ptr[i + 1] = imageData[i+1 + 75 * 4];
+        ptr[i + 2] = imageData[i+2 + 75 * 4];
+        ptr[i + 3] = imageData[i + 3 + 75 * 4];
+    }
+    delete imageData;
 
-
-    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
-    reader->GetOutput()->GetSpacing(spacing);
-    reader->GetOutput()->GetOrigin(origin);
-
-    double center[3];
-    center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
-    center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
-    center[2] = origin[2] + spacing[2] * 1.0 * (extent[4] + extent[5]);
+    double center[3] = {0, 0, 0};
 
     // Matrices for axial, coronal, sagittal, oblique view orientations
-    //static double axialElements[16] = {
-    //         1, 0, 0, 0,
-    //         0, 1, 0, 0,
-    //         0, 0, 1, 0,
-    //         0, 0, 0, 1 };
-
-    //static double coronalElements[16] = {
-    //         1, 0, 0, 0,
-    //         0, 0, 1, 0,
-    //         0,-1, 0, 0,
-    //         0, 0, 0, 1 };
-
-    static double sagittalElements[16] = {
-        1, 0,0, 0,
-        0, 1, 0, 0,
-        0,0, 1, 0,
-        0, 0, 0, 1 };
-
-    //static double obliqueElements[16] = {
-    //         1, 0, 0, 0,
-    //         0, 0.866025, -0.5, 0,
-    //         0, 0.5, 0.866025, 0,
-    //         0, 0, 0, 1 };
+    static double axialElements[16] = {
+             1, 0, 0, 0,
+             0, 1, 0, 0,
+             0, 0, 1, 0,
+             0, 0, 0, 1 };
 
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxes =
         vtkSmartPointer<vtkMatrix4x4>::New();
-    resliceAxes->DeepCopy(sagittalElements);
+    resliceAxes->DeepCopy(axialElements);
     // Set the point through which to slice
     resliceAxes->SetElement(0, 3, center[0]);
     resliceAxes->SetElement(1, 3, center[1]);
@@ -202,24 +206,24 @@ int main()
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> reslice =
         vtkSmartPointer<vtkImageReslice>::New();
-    reslice->SetInputConnection(reader->GetOutputPort());
+    reslice->SetInputData(doseImageData);
     reslice->SetOutputDimensionality(2);
     reslice->SetResliceAxes(resliceAxes);
     reslice->SetInterpolationModeToLinear();
 
     // Create a greyscale lookup table
-    vtkSmartPointer<vtkLookupTable> table =
-        vtkSmartPointer<vtkLookupTable>::New();
-    table->SetRange(-325, 200); // image intensity range
-    table->SetValueRange(0.0, 1.0); // from black to white
-    table->SetSaturationRange(0.0, 0.0); // no color saturation
-    table->SetRampToLinear();
-    table->Build();
+    vtkSmartPointer<vtkLookupTable> lookupTable = vtkSmartPointer<vtkLookupTable>::New();
+    lookupTable->SetNumberOfColors(4);
+    lookupTable->SetTableRange(0 + 20, 256 - 256 / 4);
+    lookupTable->SetScaleToLinear();
+    lookupTable->SetValueRange(0.1, 1.0);
+    lookupTable->SetHueRange(0.667, 0.0);
+    lookupTable->Build();
 
     // Map the image through the lookup table
     vtkSmartPointer<vtkImageMapToColors> color =
         vtkSmartPointer<vtkImageMapToColors>::New();
-    color->SetLookupTable(table);
+    color->SetLookupTable(lookupTable);
     color->SetInputConnection(reslice->GetOutputPort());
 
     // Display the image
