@@ -478,7 +478,7 @@ int main()
     resliceBottom->SetInputConnection(reader->GetOutputPort());
     resliceBottom->SetOutputDimensionality(2);
     resliceBottom->SetResliceAxes(resliceAxesBottom);
-    resliceBottom->SetInterpolationModeToLinear();
+    resliceBottom->SetInterpolationModeToCubic();
 
     vtkSmartPointer<vtkLookupTable> tableBottom = vtkSmartPointer<vtkLookupTable>::New();
     tableBottom->SetRange(-355, 300); // image intensity range
@@ -544,7 +544,7 @@ int main()
     {
         tableTop->SetTableValue(i, color[i][0], color[i][1], color[i][2]);
     }
-    tableTop->SetRange(10, 150);
+    tableTop->SetRange(10,150);
     tableTop->Build();
 
     // Map the image through the lookup table
@@ -566,17 +566,17 @@ int main()
    // std::cout << "升采样维度：    " << magnifyDims[0] << "*" << magnifyDims[1] << "*" << magnifyDims[2] << std::endl;
    // std::cout << "升采样像素间距：" << magnifuSpacing[0] << " " << magnifuSpacing[1] << " " << magnifuSpacing[2] << std::endl;
 
-//     vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
-//     drawing->SetNumberOfScalarComponents(4);
-//     drawing->SetScalarTypeToUnsignedChar();
-//     drawing->SetExtent(0,512,0,512,0,0);
-//     drawing->DrawImage(508.365234375 - 423.9414063, 324.365234375 - 189.1601563, colorTop->GetOutput());
-//     drawing->Update();
+    vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
+    drawing->SetNumberOfScalarComponents(4);
+    drawing->SetScalarTypeToUnsignedChar();
+    drawing->SetExtent(0, 511, 0, 511, 0, 0);
+    drawing->DrawImage(106, 170, colorTop->GetOutput());
+    drawing->Update();
 
     vtkSmartPointer<vtkImageBlend> blend = vtkSmartPointer<vtkImageBlend>::New();
     blend->SetBlendModeToCompound();
     blend->AddInputData(mapBottom->GetOutput());
-    blend->AddInputData(colorTop->GetOutput());
+    blend->AddInputData(drawing->GetOutput());
     blend->SetOpacity(0, 0.5);
     blend->SetOpacity(1, 0.5);
     blend->Update();
