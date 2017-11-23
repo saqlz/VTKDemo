@@ -187,7 +187,7 @@ int main()
     double centerBottom[3];
     centerBottom[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
     centerBottom[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
-    centerBottom[2] = origin[2] + spacing[2] * 0.6 * (extent[4] + extent[5]);
+    centerBottom[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
 
     vtkSmartPointer<vtkMatrix4x4> resliceAxesBottom =
         vtkSmartPointer<vtkMatrix4x4>::New();
@@ -217,6 +217,11 @@ int main()
     mapBottom->Update();
 
     //DOSE–≈œ¢
+    static double axialElementsTop[16] = {
+        1, 0, 0, 0,
+        0, -1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1 };
     std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.dat";
     int iVolumeDimension[3] = { 150, 138, 198 };
     int iComponent = 4;
@@ -232,12 +237,12 @@ int main()
         ptr[i] = imageData[i];
         ptr[i + 1] = imageData[i + 1];
         ptr[i + 2] = imageData[i + 2];
-        ptr[i + 3] = imageData[i + 3];
+      //  ptr[i + 3] = imageData[i + 3];
     }
 
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
-    resliceAxesTop->DeepCopy(axialElements);
+    resliceAxesTop->DeepCopy(axialElementsTop);
     resliceAxesTop->SetElement(0, 3, centerBottom[0]);
     resliceAxesTop->SetElement(1, 3, centerBottom[1]);
     resliceAxesTop->SetElement(2, 3, centerBottom[2]);
@@ -513,7 +518,7 @@ int main()
     {
         tableTop->SetTableValue(i, color[i][0], color[i][1], color[i][2]);
     }
-    tableTop->SetRange(10, 600);
+    tableTop->SetRange(10, 200);
     tableTop->Build();
 
     // Map the image through the lookup table
