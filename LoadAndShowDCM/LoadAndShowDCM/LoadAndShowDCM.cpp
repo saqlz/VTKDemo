@@ -170,31 +170,58 @@ int main()
     std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.dat";
     int iVolumeDimension[3] = {150, 138, 1};
     int iComponent = 4;
-    unsigned char* imageData = LoadRawVolume<unsigned char>(iVolumeDimension, fDoseFilePath);
+    //unsigned char* imageData = LoadRawVolume<unsigned char>(iVolumeDimension, fDoseFilePath);
     vtkSmartPointer<vtkImageData> doseImageData = vtkSmartPointer<vtkImageData>::New();
     doseImageData->SetDimensions(iVolumeDimension);
     doseImageData->AllocateScalars(VTK_UNSIGNED_CHAR, iComponent);
     unsigned char* ptr = reinterpret_cast<unsigned char*>(doseImageData->GetScalarPointer());
     for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i+= iComponent)
     {
-        //std::cout << 22 << imageData[i] << imageData[i + 1] << imageData[i + 2] << imageData[i + 3] << std::endl;
-        ptr[i] = imageData[i + 75* 4];
-        ptr[i + 1] = imageData[i+1 + 75 * 4];
-        ptr[i + 2] = imageData[i+2 + 75 * 4];
-        ptr[i + 3] = imageData[i + 3 + 75 * 4];
+        ptr[i] = 128;
+        ptr[i + 1] = 0;
+        ptr[i + 2] = 0;
+        ptr[i + 3] = 0.5;
     }
-    delete imageData;
+    //delete imageData;
 
-    double center[3] = {0, 0, 0};
+    // Create a greyscale lookup table
+    vtkSmartPointer<vtkLookupTable> lookupTable = vtkSmartPointer<vtkLookupTable>::New();
+    lookupTable->SetNumberOfColors(4);
+    lookupTable->SetTableRange(0 + 20, 256 - 256 / 4);
+    lookupTable->SetScaleToLinear();
+    lookupTable->SetValueRange(0.1, 1.0);
+    lookupTable->SetHueRange(0.667, 0.0);
+    lookupTable->Build();
+    vtkSmartPointer<vtkImageMapToColors> color =
+        vtkSmartPointer<vtkImageMapToColors>::New();
+    color->SetLookupTable(lookupTable);
+    color->SetInputData(doseImageData);
+    color->Update();
 
-    // Matrices for axial, coronal, sagittal, oblique view orientations
+
+
+
+    std::string sPath = "E:\\Images\\Test\\";
+    vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    reader->SetDataByteOrderToLittleEndian();
+    reader->SetDirectoryName(sPath.c_str());
+    reader->Update();
+    int extent[6];
+    double spacing[3];
+    double origin[3];
+    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+    reader->GetOutput()->GetSpacing(spacing);
+    reader->GetOutput()->GetOrigin(origin);
+
+    double center[3];
+    center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
+    center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
+    center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
     static double axialElements[16] = {
-             1, 0, 0, 0,
-             0, 1, 0, 0,
-             0, 0, 1, 0,
-             0, 0, 0, 1 };
-
-    // Set the slice orientation
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1 };
     vtkSmartPointer<vtkMatrix4x4> resliceAxes =
         vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxes->DeepCopy(axialElements);
@@ -206,30 +233,43 @@ int main()
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> reslice =
         vtkSmartPointer<vtkImageReslice>::New();
-    reslice->SetInputData(doseImageData);
+    reslice->SetInputConnection(reader->GetOutputPort());
     reslice->SetOutputDimensionality(2);
     reslice->SetResliceAxes(resliceAxes);
     reslice->SetInterpolationModeToLinear();
 
     // Create a greyscale lookup table
-    vtkSmartPointer<vtkLookupTable> lookupTable = vtkSmartPointer<vtkLookupTable>::New();
-    lookupTable->SetNumberOfColors(4);
-    lookupTable->SetTableRange(0 + 20, 256 - 256 / 4);
-    lookupTable->SetScaleToLinear();
-    lookupTable->SetValueRange(0.1, 1.0);
-    lookupTable->SetHueRange(0.667, 0.0);
-    lookupTable->Build();
+    vtkSmartPointer<vtkLookupTable> table =
+        vtkSmartPointer<vtkLookupTable>::New();
+    table->SetRange(0, 2000); // image intensity range
+    table->SetValueRange(0.0, 1.0); // from black to white
+    table->SetSaturationRange(0.0, 0.0); // no color saturation
+    table->SetRampToLinear();
+    table->Build();
 
     // Map the image through the lookup table
-    vtkSmartPointer<vtkImageMapToColors> color =
+    vtkSmartPointer<vtkImageMapToColors> color1 =
         vtkSmartPointer<vtkImageMapToColors>::New();
-    color->SetLookupTable(lookupTable);
-    color->SetInputConnection(reslice->GetOutputPort());
+    color1->SetLookupTable(table);
+    color1->SetInputConnection(reslice->GetOutputPort());
+    color1->Update();
+
+
+    vtkSmartPointer<vtkImageBlend> blend =
+        vtkSmartPointer<vtkImageBlend>::New();
+   // blend->SetBlendModeToCompound();
+    blend->AddInputData(doseImageData);
+    blend->AddInputData(reslice->GetOutput());
+    blend->SetOpacity(0,0.5);
+    blend->SetOpacity(1, 0.5);
+    blend->Update();
+
+
 
     // Display the image
     vtkSmartPointer<vtkImageActor> actor =
         vtkSmartPointer<vtkImageActor>::New();
-    actor->GetMapper()->SetInputConnection(color->GetOutputPort());
+    actor->GetMapper()->SetInputConnection(blend->GetOutputPort());
 
     vtkSmartPointer<vtkRenderer> renderer =
         vtkSmartPointer<vtkRenderer>::New();
@@ -247,18 +287,6 @@ int main()
     interactor->SetInteractorStyle(imageStyle);
     window->SetInteractor(interactor);
     window->Render();
-
-    vtkSmartPointer<vtkImageInteractionCallback> callback =
-        vtkSmartPointer<vtkImageInteractionCallback>::New();
-    callback->SetImageReslice(reslice);
-    callback->SetInteractor(interactor);
-
-    imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
-    imageStyle->AddObserver(vtkCommand::LeftButtonPressEvent, callback);
-    imageStyle->AddObserver(vtkCommand::LeftButtonReleaseEvent, callback);
-
-    // Start interaction
-    // The Start() method doesn't return until the window is closed by the user
     interactor->Start();
 
     return EXIT_SUCCESS;
