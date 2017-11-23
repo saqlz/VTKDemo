@@ -62,7 +62,15 @@ public:
         this->Interactor = 0;
     };
 
-    void SetImageReslice(vtkImageBlend *blend) {
+    void SetImageResliceTop(vtkImageReslice *reslice) {
+        this->ImageResliceTop = reslice;
+    };
+
+    void SetImageResliceBottom(vtkImageReslice *reslice) {
+        this->ImageResliceBottom = reslice;
+    };
+
+    void SetImageBlend(vtkImageBlend *blend) {
         this->ImageBlend = blend;
     };
 
@@ -99,24 +107,28 @@ public:
         {
             if (this->Slicing)
             {
-                vtkImageBlend *blend = this->ImageBlend;
                 // Increment slice position by deltaY of mouse
                 int deltaY = lastPos[1] - currPos[1];
+                this->ImageResliceBottom->Update();
+                double sliceSpacing = this->ImageResliceBottom->GetOutput()->GetSpacing()[2];
+                vtkMatrix4x4 *matrix = this->ImageResliceBottom->GetResliceAxes();
+                // move the center point that we are slicing through
+                double point[4];
+                double center[4];
+                point[0] = 0.0;
+                point[1] = 0.0;
+                point[2] = sliceSpacing * deltaY;
+                point[3] = 1.0;
+                matrix->MultiplyPoint(point, center);
+                matrix->SetElement(0, 3, center[0]);
+                matrix->SetElement(1, 3, center[1]);
+                matrix->SetElement(2, 3, center[2]);
 
-                //reslice->Update();
-//                 double sliceSpacing = reslice->GetOutput()->GetSpacing()[2];
-//                 vtkMatrix4x4 *matrix = reslice->GetResliceAxes();
-//                 // move the center point that we are slicing through
-//                 double point[4];
-//                 double center[4];
-//                 point[0] = 0.0;
-//                 point[1] = 0.0;
-//                 point[2] = sliceSpacing * deltaY;
-//                 point[3] = 1.0;
-//                 matrix->MultiplyPoint(point, center);
-//                 matrix->SetElement(0, 3, center[0]);
-//                 matrix->SetElement(1, 3, center[1]);
-//                 matrix->SetElement(2, 3, center[2]);
+                this->ImageResliceTop->Update();
+                vtkMatrix4x4 *matrix1 = this->ImageResliceTop->GetResliceAxes();
+                matrix1->SetElement(2, 3, center[2]);
+                
+                this->ImageBlend->Update();
                 interactor->Render();
             }
             else
@@ -137,6 +149,12 @@ private:
     int Slicing;
 
     // Pointer to vtkImageReslice
+    vtkImageReslice *ImageResliceBottom;
+
+    // Pointer to vtkImageReslice
+    vtkImageReslice *ImageResliceTop;
+
+    // Pointer to vtkImageBlend
     vtkImageBlend *ImageBlend;
 
     // Pointer to the interactor
@@ -498,17 +516,17 @@ int main()
         ptr[i + 3] = imageData[i + 3];
     }
 
-    //重采样
-    vtkSmartPointer<vtkImageMagnify> magnifyFilter = vtkSmartPointer<vtkImageMagnify>::New();
-    magnifyFilter->SetInputData(doseImageData);
-    magnifyFilter->SetMagnificationFactors(2.5390625 / spacing[0], 2.5390625 / spacing[0], 1);
-    magnifyFilter->Update();
+     //重采样
+     vtkSmartPointer<vtkImageMagnify> magnifyFilter = vtkSmartPointer<vtkImageMagnify>::New();
+     magnifyFilter->SetInputData(doseImageData);
+     magnifyFilter->SetMagnificationFactors(2.5390625 / spacing[0], 2.5390625 / spacing[0], 1);
+     magnifyFilter->Update();
 
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxesTop->DeepCopy(axialElementsTop);
-    resliceAxesTop->SetElement(0, 3, 150);
-    resliceAxesTop->SetElement(1, 3, 138);
+    resliceAxesTop->SetElement(0, 3, 0);
+    resliceAxesTop->SetElement(1, 3, 0);
     resliceAxesTop->SetElement(2, 3, centerBottom[2]);
 
     // Extract a slice in the desired orientation
@@ -516,7 +534,8 @@ int main()
     resliceTop->SetInputData(magnifyFilter->GetOutput());
     resliceTop->SetOutputDimensionality(2);
     resliceTop->SetResliceAxes(resliceAxesTop);
-    resliceTop->SetInterpolationModeToLinear();
+    resliceTop->SetInterpolationModeToNearestNeighbor();
+    resliceTop->Update();
 
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
@@ -531,40 +550,33 @@ int main()
     // Map the image through the lookup table
     vtkSmartPointer<vtkImageMapToColors> colorTop = vtkSmartPointer<vtkImageMapToColors>::New();
     colorTop->SetLookupTable(tableTop);
-    colorTop->SetInputConnection(resliceTop->GetOutputPort());
+    colorTop->SetInputData(resliceTop->GetOutput());
     colorTop->Update();
 
+   // int originalDims[3];
+   // reader->GetOutput()->GetDimensions(originalDims);
+   // double originalSpacing[3];
+   // reader->GetOutput()->GetSpacing(originalSpacing);
+   // int magnifyDims[3];
+   //// magnifyFilter->GetOutput()->GetDimensions(magnifyDims);
+   // double magnifuSpacing[3];
+   // //magnifyFilter->GetOutput()->GetSpacing(magnifuSpacing);
+   // std::cout << "原始维度：      " << originalDims[0] << "*" << originalDims[1] << "*" << originalDims[2] << std::endl;
+   // std::cout << "原始像素间距：  " << originalSpacing[0] << " " << originalSpacing[1] << " " << originalSpacing[2] << std::endl;
+   // std::cout << "升采样维度：    " << magnifyDims[0] << "*" << magnifyDims[1] << "*" << magnifyDims[2] << std::endl;
+   // std::cout << "升采样像素间距：" << magnifuSpacing[0] << " " << magnifuSpacing[1] << " " << magnifuSpacing[2] << std::endl;
 
-
-
-    int originalDims[3];
-    reader->GetOutput()->GetDimensions(originalDims);
-    double originalSpacing[3];
-    reader->GetOutput()->GetSpacing(originalSpacing);
-    int shrinkDims[3];
-    int magnifyDims[3];
-    magnifyFilter->GetOutput()->GetDimensions(magnifyDims);
-    double magnifuSpacing[3];
-    magnifyFilter->GetOutput()->GetSpacing(magnifuSpacing);
-    std::cout << "原始维度：      " << originalDims[0] << "*" << originalDims[1] << "*" << originalDims[2] << std::endl;
-    std::cout << "原始像素间距：  " << originalSpacing[0] << " " << originalSpacing[1] << " " << originalSpacing[2] << std::endl;
-    std::cout << "升采样维度：    " << magnifyDims[0] << "*" << magnifyDims[1] << "*" << magnifyDims[2] << std::endl;
-    std::cout << "升采样像素间距：" << magnifuSpacing[0] << " " << magnifuSpacing[1] << " " << magnifuSpacing[2] << std::endl;
-
-
-    vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
-    drawing->SetNumberOfScalarComponents(4);
-    drawing->SetScalarTypeToUnsignedChar();
-    drawing->SetExtent(extent);
-    drawing->SetDrawColor(0.0, 0.0, 0.0);
-    drawing->FillBox(extent[0], extent[1], extent[2], extent[3]);
-    drawing->DrawImage(508.365234375 - 423.9414063, 324.365234375 - 189.1601563, colorTop->GetOutput());
-    drawing->Update();
+//     vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
+//     drawing->SetNumberOfScalarComponents(4);
+//     drawing->SetScalarTypeToUnsignedChar();
+//     drawing->SetExtent(0,512,0,512,0,0);
+//     drawing->DrawImage(508.365234375 - 423.9414063, 324.365234375 - 189.1601563, colorTop->GetOutput());
+//     drawing->Update();
 
     vtkSmartPointer<vtkImageBlend> blend = vtkSmartPointer<vtkImageBlend>::New();
-    blend->SetBlendModeToNormal();
+    blend->SetBlendModeToCompound();
     blend->AddInputData(mapBottom->GetOutput());
-    blend->AddInputData(drawing->GetOutput());
+    blend->AddInputData(colorTop->GetOutput());
     blend->SetOpacity(0, 0.5);
     blend->SetOpacity(1, 0.5);
     blend->Update();
@@ -584,13 +596,15 @@ int main()
     window->SetInteractor(interactor);
     window->Render();
 
-//     vtkSmartPointer<vtkImageInteractionCallback> callback = vtkSmartPointer<vtkImageInteractionCallback>::New();
-//     callback->SetImageReslice(blend);
-//     callback->SetInteractor(interactor);
-// 
-//     imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
-//     imageStyle->AddObserver(vtkCommand::LeftButtonPressEvent, callback);
-//     imageStyle->AddObserver(vtkCommand::LeftButtonReleaseEvent, callback);
+    vtkSmartPointer<vtkImageInteractionCallback> callback = vtkSmartPointer<vtkImageInteractionCallback>::New();
+    callback->SetImageResliceBottom(resliceBottom);
+    callback->SetImageResliceTop(resliceTop);
+    callback->SetImageBlend(blend);
+    callback->SetInteractor(interactor);
+
+    imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
+    imageStyle->AddObserver(vtkCommand::LeftButtonPressEvent, callback);
+    imageStyle->AddObserver(vtkCommand::LeftButtonReleaseEvent, callback);
 
     // Start interaction
     // The Start() method doesn't return until the window is closed by the user
