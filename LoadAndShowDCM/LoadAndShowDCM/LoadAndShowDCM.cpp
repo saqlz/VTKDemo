@@ -43,25 +43,104 @@ PURPOSE.  See the above copyright notice for more information.
 #include "vtkImageMapper3D.h"
 #include "vtkStreamingDemandDrivenPipeline.h"
 #include "vtkInformation.h"
-#include "vtkImageGridSource.h"
-#include "vtkImageBSplineInterpolator.h"
-#include "vtkImageBSplineCoefficients.h"
-#include "vtkImageReslice.h"
-#include "vtkBSplineTransform.h"
-#include "vtkTransformToGrid.h"
-#include "vtkThinPlateSplineTransform.h"
-#include "vtkImageViewer.h"
-#include "vtkImageGridSource.h"
-#include "vtkImageBlend.h"
-#include "vtkImageMapToColors.h"
-#include "vtkLookupTable.h"
-#include "vtkPoints.h"
-#include "vtkRenderer.h"
-#include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
-#include "vtkRegressionTestImage.h"
-#include "vtkSmartPointer.h"
 #include "vtkImageCanvasSource2D.h"
+
+// The mouse motion callback, to turn "Slicing" on and off
+class vtkImageInteractionCallback : public vtkCommand
+{
+public:
+
+    static vtkImageInteractionCallback *New() {
+        return new vtkImageInteractionCallback;
+    };
+
+    vtkImageInteractionCallback() {
+        this->Slicing = 0;
+        this->ImageBlend = 0;
+        this->Interactor = 0;
+    };
+
+    void SetImageReslice(vtkImageBlend *blend) {
+        this->ImageBlend = blend;
+    };
+
+    vtkImageBlend *GetImageReslice() {
+        return this->ImageBlend;
+    };
+
+    void SetInteractor(vtkRenderWindowInteractor *interactor) {
+        this->Interactor = interactor;
+    };
+
+    vtkRenderWindowInteractor *GetInteractor() {
+        return this->Interactor;
+    };
+
+    void Execute(vtkObject *, unsigned long event, void *) VTK_OVERRIDE
+    {
+        vtkRenderWindowInteractor *interactor = this->GetInteractor();
+
+        int lastPos[2];
+        interactor->GetLastEventPosition(lastPos);
+        int currPos[2];
+        interactor->GetEventPosition(currPos);
+
+        if (event == vtkCommand::LeftButtonPressEvent)
+        {
+            this->Slicing = 1;
+        }
+        else if (event == vtkCommand::LeftButtonReleaseEvent)
+        {
+            this->Slicing = 0;
+        }
+        else if (event == vtkCommand::MouseMoveEvent)
+        {
+            if (this->Slicing)
+            {
+                vtkImageBlend *blend = this->ImageBlend;
+                // Increment slice position by deltaY of mouse
+                int deltaY = lastPos[1] - currPos[1];
+
+                //reslice->Update();
+//                 double sliceSpacing = reslice->GetOutput()->GetSpacing()[2];
+//                 vtkMatrix4x4 *matrix = reslice->GetResliceAxes();
+//                 // move the center point that we are slicing through
+//                 double point[4];
+//                 double center[4];
+//                 point[0] = 0.0;
+//                 point[1] = 0.0;
+//                 point[2] = sliceSpacing * deltaY;
+//                 point[3] = 1.0;
+//                 matrix->MultiplyPoint(point, center);
+//                 matrix->SetElement(0, 3, center[0]);
+//                 matrix->SetElement(1, 3, center[1]);
+//                 matrix->SetElement(2, 3, center[2]);
+                interactor->Render();
+            }
+            else
+            {
+                vtkInteractorStyle *style = vtkInteractorStyle::SafeDownCast(
+                    interactor->GetInteractorStyle());
+                if (style)
+                {
+                    style->OnMouseMove();
+                }
+            }
+        }
+    };
+
+private:
+
+    // Actions (slicing only, for now)
+    int Slicing;
+
+    // Pointer to vtkImageReslice
+    vtkImageBlend *ImageBlend;
+
+    // Pointer to the interactor
+    vtkRenderWindowInteractor *Interactor;
+};
+
 
 
 namespace
@@ -84,8 +163,10 @@ namespace
     }
 }
 
+// The program entry point
 int main()
 {
+    // Matrices for axial, coronal, sagittal, oblique view orientations
     static double axialElements[16] = {
         1, 0, 0, 0,
         0, 1, 0, 0,
@@ -135,6 +216,7 @@ int main()
     mapBottom->SetLookupTable(tableBottom);
     mapBottom->Update();
 
+    //DOSE–≈œ¢
     std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.dat";
     int iVolumeDimension[3] = { 150, 138, 198 };
     int iComponent = 4;
@@ -150,9 +232,10 @@ int main()
         ptr[i] = imageData[i];
         ptr[i + 1] = imageData[i + 1];
         ptr[i + 2] = imageData[i + 2];
-        //ptr[i + 3] = imageData[i + 3];
+        ptr[i + 3] = imageData[i + 3];
     }
 
+    // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxesTop->DeepCopy(axialElements);
     resliceAxesTop->SetElement(0, 3, centerBottom[0]);
@@ -166,18 +249,278 @@ int main()
     resliceTop->SetResliceAxes(resliceAxesTop);
     resliceTop->SetInterpolationModeToLinear();
 
-    vtkSmartPointer<vtkLookupTable> tableTop =  vtkSmartPointer<vtkLookupTable>::New();
-    tableTop->SetTableRange(0, 1);
-    tableTop->SetValueRange(1.0, 0.7);
-    tableTop->SetSaturationRange(0.0, 1.0);
-    tableTop->SetHueRange(0.12, 0.12);
-    tableTop->SetAlphaRange(1.0, 1.0);
+    double color[256][3] = { { 0 / 255.0, 0 / 255.0, 0 / 255.0 },
+    { 4 / 255.0, 0 / 255.0, 2 / 255.0 },
+    { 8 / 255.0, 0 / 255.0, 4 / 255.0 },
+    { 12 / 255.0, 0 / 255.0, 6 / 255.0 },
+    { 16 / 255.0, 0 / 255.0, 8 / 255.0 },
+    { 20 / 255.0, 0 / 255.0, 10 / 255.0 },
+    { 24 / 255.0, 0 / 255.0, 12 / 255.0 },
+    { 28 / 255.0, 0 / 255.0, 14 / 255.0 },
+    { 32 / 255.0, 0 / 255.0, 16 / 255.0 },
+    { 36 / 255.0, 0 / 255.0, 18 / 255.0 },
+    { 40 / 255.0, 0 / 255.0, 20 / 255.0 },
+    { 44 / 255.0, 0 / 255.0, 22 / 255.0 },
+    { 48 / 255.0, 0 / 255.0, 24 / 255.0 },
+    { 52 / 255.0, 0 / 255.0, 26 / 255.0 },
+    { 56 / 255.0, 0 / 255.0, 28 / 255.0 },
+    { 60 / 255.0, 0 / 255.0, 30 / 255.0 },
+    { 64 / 255.0, 0 / 255.0, 32 / 255.0 },
+    { 68 / 255.0, 0 / 255.0, 34 / 255.0 },
+    { 72 / 255.0, 0 / 255.0, 36 / 255.0 },
+    { 76 / 255.0, 0 / 255.0, 38 / 255.0 },
+    { 80 / 255.0, 0 / 255.0, 40 / 255.0 },
+    { 84 / 255.0, 0 / 255.0, 42 / 255.0 },
+    { 88 / 255.0, 0 / 255.0, 44 / 255.0 },
+    { 92 / 255.0, 0 / 255.0, 46 / 255.0 },
+    { 96 / 255.0, 0 / 255.0, 48 / 255.0 },
+    { 100 / 255.0, 0 / 255.0, 50 / 255.0 },
+    { 104 / 255.0, 0 / 255.0, 52 / 255.0 },
+    { 108 / 255.0, 0 / 255.0, 54 / 255.0 },
+    { 112 / 255.0, 0 / 255.0, 56 / 255.0 },
+    { 116 / 255.0, 0 / 255.0, 58 / 255.0 },
+    { 120 / 255.0, 0 / 255.0, 60 / 255.0 },
+    { 124 / 255.0, 0 / 255.0, 62 / 255.0 },
+    { 128 / 255.0, 0 / 255.0, 64 / 255.0 },
+    { 132 / 255.0, 0 / 255.0, 62 / 255.0 },
+    { 136 / 255.0, 0 / 255.0, 60 / 255.0 },
+    { 140 / 255.0, 0 / 255.0, 58 / 255.0 },
+    { 144 / 255.0, 0 / 255.0, 56 / 255.0 },
+    { 148 / 255.0, 0 / 255.0, 54 / 255.0 },
+    { 152 / 255.0, 0 / 255.0, 52 / 255.0 },
+    { 156 / 255.0, 0 / 255.0, 50 / 255.0 },
+    { 160 / 255.0, 0 / 255.0, 48 / 255.0 },
+    { 164 / 255.0, 0 / 255.0, 46 / 255.0 },
+    { 168 / 255.0, 0 / 255.0, 44 / 255.0 },
+    { 172 / 255.0, 0 / 255.0, 42 / 255.0 },
+    { 176 / 255.0, 0 / 255.0, 40 / 255.0 },
+    { 180 / 255.0, 0 / 255.0, 38 / 255.0 },
+    { 184 / 255.0, 0 / 255.0, 36 / 255.0 },
+    { 188 / 255.0, 0 / 255.0, 34 / 255.0 },
+    { 192 / 255.0, 0 / 255.0, 32 / 255.0 },
+    { 196 / 255.0, 0 / 255.0, 30 / 255.0 },
+    { 200 / 255.0, 0 / 255.0, 28 / 255.0 },
+    { 204 / 255.0, 0 / 255.0, 26 / 255.0 },
+    { 208 / 255.0, 0 / 255.0, 24 / 255.0 },
+    { 212 / 255.0, 0 / 255.0, 22 / 255.0 },
+    { 216 / 255.0, 0 / 255.0, 20 / 255.0 },
+    { 220 / 255.0, 0 / 255.0, 18 / 255.0 },
+    { 224 / 255.0, 0 / 255.0, 16 / 255.0 },
+    { 228 / 255.0, 0 / 255.0, 14 / 255.0 },
+    { 232 / 255.0, 0 / 255.0, 12 / 255.0 },
+    { 236 / 255.0, 0 / 255.0, 10 / 255.0 },
+    { 240 / 255.0, 0 / 255.0, 8 / 255.0 },
+    { 244 / 255.0, 0 / 255.0, 6 / 255.0 },
+    { 248 / 255.0, 0 / 255.0, 4 / 255.0 },
+    { 252 / 255.0, 0 / 255.0, 2 / 255.0 },
+    { 255 / 255.0, 0 / 255.0, 0 / 255.0 },
+    { 247 / 255.0, 8 / 255.0, 0 / 255.0 },
+    { 239 / 255.0, 16 / 255.0, 0 / 255.0 },
+    { 231 / 255.0, 24 / 255.0, 0 / 255.0 },
+    { 223 / 255.0, 32 / 255.0, 0 / 255.0 },
+    { 215 / 255.0, 40 / 255.0, 0 / 255.0 },
+    { 207 / 255.0, 48 / 255.0, 0 / 255.0 },
+    { 199 / 255.0, 56 / 255.0, 0 / 255.0 },
+    { 191 / 255.0, 64 / 255.0, 0 / 255.0 },
+    { 183 / 255.0, 72 / 255.0, 0 / 255.0 },
+    { 175 / 255.0, 80 / 255.0, 0 / 255.0 },
+    { 167 / 255.0, 88 / 255.0, 0 / 255.0 },
+    { 159 / 255.0, 96 / 255.0, 0 / 255.0 },
+    { 151 / 255.0, 104 / 255.0, 0 / 255.0 },
+    { 143 / 255.0, 112 / 255.0, 0 / 255.0 },
+    { 135 / 255.0, 120 / 255.0, 0 / 255.0 },
+    { 127 / 255.0, 128 / 255.0, 0 / 255.0 },
+    { 119 / 255.0, 136 / 255.0, 0 / 255.0 },
+    { 111 / 255.0, 144 / 255.0, 0 / 255.0 },
+    { 103 / 255.0, 152 / 255.0, 0 / 255.0 },
+    { 95 / 255.0, 160 / 255.0, 0 / 255.0 },
+    { 87 / 255.0, 168 / 255.0, 0 / 255.0 },
+    { 79 / 255.0, 176 / 255.0, 0 / 255.0 },
+    { 71 / 255.0, 184 / 255.0, 0 / 255.0 },
+    { 63 / 255.0, 192 / 255.0, 0 / 255.0 },
+    { 55 / 255.0, 200 / 255.0, 0 / 255.0 },
+    { 47 / 255.0, 208 / 255.0, 0 / 255.0 },
+    { 39 / 255.0, 216 / 255.0, 0 / 255.0 },
+    { 31 / 255.0, 224 / 255.0, 0 / 255.0 },
+    { 23 / 255.0, 232 / 255.0, 0 / 255.0 },
+    { 15 / 255.0, 240 / 255.0, 0 / 255.0 },
+    { 7 / 255.0, 248 / 255.0, 0 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 0 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 4 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 8 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 12 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 16 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 20 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 24 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 28 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 32 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 36 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 40 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 44 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 48 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 52 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 56 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 60 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 64 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 68 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 72 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 76 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 80 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 84 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 88 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 92 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 96 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 100 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 104 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 108 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 112 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 116 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 120 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 124 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 128 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 132 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 136 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 140 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 144 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 148 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 152 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 156 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 160 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 164 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 168 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 172 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 176 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 180 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 184 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 188 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 192 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 196 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 200 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 204 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 208 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 212 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 216 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 220 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 224 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 228 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 232 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 236 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 240 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 244 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 248 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 252 / 255.0 },
+    { 0 / 255.0, 255 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 253 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 251 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 249 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 247 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 245 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 243 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 241 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 239 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 237 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 235 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 233 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 231 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 229 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 227 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 225 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 223 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 221 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 219 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 217 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 215 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 213 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 211 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 209 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 207 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 205 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 203 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 201 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 199 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 197 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 195 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 193 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 192 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 189 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 186 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 183 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 180 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 177 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 174 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 171 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 168 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 165 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 162 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 159 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 156 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 153 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 150 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 147 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 144 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 141 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 138 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 135 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 132 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 129 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 126 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 123 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 120 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 117 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 114 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 111 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 108 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 105 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 102 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 99 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 96 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 93 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 90 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 87 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 84 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 81 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 78 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 75 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 72 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 69 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 66 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 63 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 60 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 57 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 54 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 51 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 48 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 45 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 42 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 39 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 36 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 33 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 30 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 27 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 24 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 21 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 18 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 15 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 12 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 9 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 6 / 255.0, 255 / 255.0 },
+    { 0 / 255.0, 3 / 255.0, 255 / 255.0 } };
+
+    // Create a greyscale lookup table
+    vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
+    tableTop->SetNumberOfColors(256);
+    for (int i = 0; i < 256; i++)
+    {
+        tableTop->SetTableValue(i, color[i][0], color[i][1], color[i][2]);
+    }
+    tableTop->SetRange(10, 600);
     tableTop->Build();
 
-    vtkSmartPointer<vtkImageMapToColors> mapTop = vtkSmartPointer<vtkImageMapToColors>::New();
-    mapTop->SetInputConnection(resliceTop->GetOutputPort());
-    mapTop->SetLookupTable(tableTop);
-    mapTop->Update();
+    // Map the image through the lookup table
+    vtkSmartPointer<vtkImageMapToColors> colorTop = vtkSmartPointer<vtkImageMapToColors>::New();
+    colorTop->SetLookupTable(tableTop);
+    colorTop->SetInputConnection(resliceTop->GetOutputPort());
+    colorTop->Update();
 
     vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
     drawing->SetNumberOfScalarComponents(4);
@@ -185,43 +528,45 @@ int main()
     drawing->SetExtent(extent);
     drawing->SetDrawColor(0.0, 0.0, 0.0);
     drawing->FillBox(extent[0], extent[1], extent[2], extent[3]);
-    //drawing->SetDrawColor(255.0, 255.0, 255.0);
-    drawing->DrawImage(508.365234375 - 423.9414063, 324.365234375 - 189.1601563,  mapTop->GetOutput());
+    drawing->DrawImage(508.365234375 - 423.9414063, 324.365234375 - 189.1601563, colorTop->GetOutput());
     drawing->Update();
 
 
     vtkSmartPointer<vtkImageBlend> blend = vtkSmartPointer<vtkImageBlend>::New();
     blend->SetBlendModeToCompound();
-    blend->AddInputData(0, mapBottom->GetOutput());
-    blend->AddInputData(0, drawing->GetOutput());
+    blend->AddInputData(mapBottom->GetOutput());
+    blend->AddInputData(drawing->GetOutput());
     blend->SetOpacity(0, 0.5);
     blend->SetOpacity(1, 0.5);
+    
 
     // Display the image
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
     actor->GetMapper()->SetInputConnection(blend->GetOutputPort());
-
-    vtkSmartPointer<vtkRenderer> renderer =
-        vtkSmartPointer<vtkRenderer>::New();
+    vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actor);
-
-    vtkSmartPointer<vtkRenderWindow> window =
-        vtkSmartPointer<vtkRenderWindow>::New();
+    vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();
     window->AddRenderer(renderer);
 
     // Set up the interaction
-    vtkSmartPointer<vtkInteractorStyleImage> imageStyle =
-        vtkSmartPointer<vtkInteractorStyleImage>::New();
-    vtkSmartPointer<vtkRenderWindowInteractor> interactor =
-        vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    vtkSmartPointer<vtkInteractorStyleImage> imageStyle = vtkSmartPointer<vtkInteractorStyleImage>::New();
+    vtkSmartPointer<vtkRenderWindowInteractor> interactor = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     interactor->SetInteractorStyle(imageStyle);
     window->SetInteractor(interactor);
     window->Render();
+
+//     vtkSmartPointer<vtkImageInteractionCallback> callback = vtkSmartPointer<vtkImageInteractionCallback>::New();
+//     callback->SetImageReslice(blend);
+//     callback->SetInteractor(interactor);
+// 
+//     imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
+//     imageStyle->AddObserver(vtkCommand::LeftButtonPressEvent, callback);
+//     imageStyle->AddObserver(vtkCommand::LeftButtonReleaseEvent, callback);
+
+    // Start interaction
+    // The Start() method doesn't return until the window is closed by the user
     interactor->Start();
 
     return EXIT_SUCCESS;
 }
-
-
-
 
