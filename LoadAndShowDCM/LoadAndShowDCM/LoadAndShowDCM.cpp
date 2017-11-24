@@ -170,8 +170,8 @@ private:
 int main()
 {
     //TestLoadCTImage();
-    //TestLoadCTImageReslice();
-    TestBlendCTImageAndDose();
+    TestLoadCTImageReslice();
+    //TestBlendCTImageAndDose();
     return 0;
 }
 
@@ -181,6 +181,8 @@ void TestLoadCTImage()
     std::string sImagePath = "D:\\GitHub\\WisdomRay\\test\\ctimage.dat";
     int iImageVolumeDimension[3] = { 512, 512, 198 };
     int iImageVolumeComponent = 1;
+    int iRescaleSlope = 1;
+    int iRescaleIntercept = -1024;
     vtkSmartPointer<vtkImageData> ctImageData = vtkSmartPointer<vtkImageData>::New();
     ctImageData->SetDimensions(iImageVolumeDimension);
     ctImageData->AllocateScalars(VTK_SHORT, iImageVolumeComponent);
@@ -190,7 +192,7 @@ void TestLoadCTImage()
     short* imagePtr = reinterpret_cast<short*>(ctImageData->GetScalarPointer());
     for (int i = 0; i < iImageVolumeDimension[0] * iImageVolumeDimension[1] * iImageVolumeDimension[2] * iImageVolumeComponent; i += iImageVolumeComponent)
     {
-        imagePtr[i] = imageVolumeData[i] * 1 - 1024;
+        imagePtr[i] = imageVolumeData[i] * iRescaleSlope + iRescaleIntercept;
     }
 
     std::string folder = "E:\\Images\\Test\\";
@@ -205,7 +207,7 @@ void TestLoadCTImage()
     //设置基本属性
     viewer->SetSize(640, 480);
     viewer->SetColorLevel(35);
-    viewer->SetColorWindow(300);
+    viewer->SetColorWindow(150);
     viewer->SetSlice(40);
     viewer->SetSliceOrientationToXY();
     viewer->Render();
@@ -222,6 +224,8 @@ void TestLoadCTImageReslice()
     std::string sImagePath = "D:\\GitHub\\WisdomRay\\test\\ctimage.dat";
     int iImageVolumeDimension[3] = { 512, 512, 198 };
     int iImageVolumeComponent = 1;
+    int iRescaleSlope = 1;
+    int iRescaleIntercept = -1024;
     vtkSmartPointer<vtkImageData> ctImageData = vtkSmartPointer<vtkImageData>::New();
     ctImageData->SetDimensions(iImageVolumeDimension);
     ctImageData->AllocateScalars(VTK_SHORT, iImageVolumeComponent);
@@ -231,7 +235,7 @@ void TestLoadCTImageReslice()
     short* imagePtr = reinterpret_cast<short*>(ctImageData->GetScalarPointer());
     for (int i = 0; i < iImageVolumeDimension[0] * iImageVolumeDimension[1] * iImageVolumeDimension[2] * iImageVolumeComponent; i += iImageVolumeComponent)
     {
-        imagePtr[i] = imageVolumeData[i];
+        imagePtr[i] = imageVolumeData[i] * iRescaleSlope + iRescaleIntercept;
     }
 
     double spacing[3];
@@ -243,10 +247,9 @@ void TestLoadCTImageReslice()
     center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
     center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
     center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
-
     static double axialElements[16] = {
              1, 0, 0, 0,
-             0, 1, 0, 0,
+             0, -1, 0, 0,
              0, 0, 1, 0,
              0, 0, 0, 1 };
 
