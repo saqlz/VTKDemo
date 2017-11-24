@@ -422,7 +422,7 @@ const double color[256][3] = { { 0 / 255.0, 0 / 255.0, 0 / 255.0 },
 namespace
 {
     template<typename T>
-    T* LoadRawVolume(int(&iDim)[3], const std::string &strPath)
+    T* LoadRawVolume(int(&iDim)[3], const std::string &strPath, const int num)
     {
         std::ifstream in(strPath, std::ios::binary | std::ios::in);
         if (!in.is_open())
@@ -431,8 +431,8 @@ namespace
             return nullptr;
         }
 
-        T* pData = new T[4 * iDim[0] * iDim[1] * iDim[2]];
-        in.read((char*)pData, 4 * iDim[0] * iDim[1] * iDim[2] * sizeof(T));
+        T* pData = new T[num * iDim[0] * iDim[1] * iDim[2]];
+        in.read((char*)pData, num * iDim[0] * iDim[1] * iDim[2] * sizeof(T));
         in.close();
 
         return pData;
@@ -443,39 +443,49 @@ namespace
 int main()
 {
     // Matrices for axial, coronal, sagittal, oblique view orientations
+    // Matrices for axial, coronal, sagittal, oblique view orientations
     static double axialElements[16] = {
+        0, 0,-1, 0,
         1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
+        0,-1, 0, 0,
         0, 0, 0, 1 };
 
-    std::string sPath = "E:\\Images\\Test\\";
-    vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
-    reader->SetDataByteOrderToLittleEndian();
-    reader->SetDirectoryName(sPath.c_str());
-    reader->Update();
-    int extent[6];
+    std::string sImagePath = "D:\\GitHub\\WisdomRay\\test\\ctimage.dat";
+    int iImageVolumeDimension[3] = { 512, 512, 198 };
+    int iImageVolumeComponent = 1;
+    vtkSmartPointer<vtkImageData> ctImageData = vtkSmartPointer<vtkImageData>::New();
+    ctImageData->SetDimensions(iImageVolumeDimension);
+    ctImageData->AllocateScalars(VTK_SHORT, iImageVolumeComponent);
+    ctImageData->SetOrigin(0, 0, 0);
+    ctImageData->SetSpacing(1.26953125, 1.26953125, 2);
+    short* imageVolumeData = LoadRawVolume<short>(iImageVolumeDimension, sImagePath, iImageVolumeComponent);
+    short* imagePtr = reinterpret_cast<short*>(ctImageData->GetScalarPointer());
+    for (int i = 0; i < iImageVolumeDimension[0] * iImageVolumeDimension[1] * iImageVolumeDimension[2] * iImageVolumeComponent; i += iImageVolumeComponent)
+    {
+        imagePtr[i] = imageVolumeData[i];
+    }
+
     double spacing[3];
     double origin[3];
-    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
-    reader->GetOutput()->GetSpacing(spacing);
-    reader->GetOutput()->GetOrigin(origin);
-    double centerBottom[3];
-    centerBottom[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
-    centerBottom[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
-    centerBottom[2] = origin[2] + spacing[2] * 0.42 * (extent[4] + extent[5]);
+    ctImageData->GetSpacing(spacing);
+    ctImageData->GetOrigin(origin);
+    int* bound = ctImageData->GetExtent();
+    double imageCenter[3];
+    imageCenter[0] = origin[0] + spacing[0] * 0.5 * (bound[0] + bound[1]);
+    imageCenter[1] = origin[1] + spacing[1] * 0.5 * (bound[2] + bound[3]);
+    imageCenter[2] = origin[2] + spacing[2] * 0.42 * (bound[4] + bound[5]);
 
     vtkSmartPointer<vtkMatrix4x4> resliceAxesBottom =
         vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxesBottom->DeepCopy(axialElements);
-    resliceAxesBottom->SetElement(0, 3, centerBottom[0]);
-    resliceAxesBottom->SetElement(1, 3, centerBottom[1]);
-    resliceAxesBottom->SetElement(2, 3, centerBottom[2]);
+    resliceAxesBottom->SetElement(0, 3, imageCenter[0]);
+    resliceAxesBottom->SetElement(1, 3, imageCenter[1]);
+    resliceAxesBottom->SetElement(2, 3, imageCenter[2]);
 
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> resliceBottom =
         vtkSmartPointer<vtkImageReslice>::New();
-    resliceBottom->SetInputConnection(reader->GetOutputPort());
+    resliceBottom->SetInputData(ctImageData);
     resliceBottom->SetOutputDimensionality(2);
     resliceBottom->SetResliceAxes(resliceAxesBottom);
     resliceBottom->SetInterpolationModeToCubic();
@@ -493,15 +503,10 @@ int main()
     mapBottom->Update();
 
     //DOSE信息
-    static double axialElementsTop[16] = {
-        1, 0, 0, 0,
-        0, -1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1 };
     std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.dat";
     int iVolumeDimension[3] = { 150, 138, 198 };
     int iComponent = 4;
-    unsigned char* imageData = LoadRawVolume<unsigned char>(iVolumeDimension, fDoseFilePath);
+    unsigned char* imageData = LoadRawVolume<unsigned char>(iVolumeDimension, fDoseFilePath,4);
     vtkSmartPointer<vtkImageData> doseImageData = vtkSmartPointer<vtkImageData>::New();
     doseImageData->SetDimensions(iVolumeDimension);
     doseImageData->AllocateScalars(VTK_UNSIGNED_CHAR, iComponent);
@@ -516,22 +521,16 @@ int main()
         ptr[i + 3] = imageData[i + 3];
     }
 
-     //重采样
-     vtkSmartPointer<vtkImageMagnify> magnifyFilter = vtkSmartPointer<vtkImageMagnify>::New();
-     magnifyFilter->SetInputData(doseImageData);
-     magnifyFilter->SetMagnificationFactors(2.5390625 / spacing[0], 2.5390625 / spacing[0], 1);
-     magnifyFilter->Update();
-
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
-    resliceAxesTop->DeepCopy(axialElementsTop);
+    resliceAxesTop->DeepCopy(axialElements);
     resliceAxesTop->SetElement(0, 3, 0);
     resliceAxesTop->SetElement(1, 3, 0);
-    resliceAxesTop->SetElement(2, 3, centerBottom[2]);
+    resliceAxesTop->SetElement(2, 3, imageCenter[2]);
 
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> resliceTop = vtkSmartPointer<vtkImageReslice>::New();
-    resliceTop->SetInputData(magnifyFilter->GetOutput());
+    resliceTop->SetInputData(doseImageData);
     resliceTop->SetOutputDimensionality(2);
     resliceTop->SetResliceAxes(resliceAxesTop);
     resliceTop->SetInterpolationModeToNearestNeighbor();
@@ -544,14 +543,24 @@ int main()
     {
         tableTop->SetTableValue(i, color[i][0], color[i][1], color[i][2]);
     }
-    tableTop->SetRange(10,150);
+    tableTop->SetRange(0,200);
     tableTop->Build();
+
 
     // Map the image through the lookup table
     vtkSmartPointer<vtkImageMapToColors> colorTop = vtkSmartPointer<vtkImageMapToColors>::New();
     colorTop->SetLookupTable(tableTop);
     colorTop->SetInputData(resliceTop->GetOutput());
     colorTop->Update();
+
+
+
+    //重采样
+    vtkSmartPointer<vtkImageMagnify> magnifyFilter = vtkSmartPointer<vtkImageMagnify>::New();
+    magnifyFilter->SetInputData(colorTop->GetOutput());
+    magnifyFilter->SetMagnificationFactors(2.5390625 / spacing[0], 2.5390625 / spacing[0], 1);
+    magnifyFilter->Update();
+
 
    // int originalDims[3];
    // reader->GetOutput()->GetDimensions(originalDims);
@@ -569,8 +578,8 @@ int main()
     vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
     drawing->SetNumberOfScalarComponents(4);
     drawing->SetScalarTypeToUnsignedChar();
-    drawing->SetExtent(0, 511, 0, 511, 0, 0);
-    drawing->DrawImage(106, 170, colorTop->GetOutput());
+    drawing->SetExtent(0, 512, 0, 512, 0, 0);
+    drawing->DrawImage((324.365234375 - 189.1601543) / spacing[0], ((508.365234375 - 423.9414063) / spacing[1]), magnifyFilter->GetOutput());
     drawing->Update();
 
     vtkSmartPointer<vtkImageBlend> blend = vtkSmartPointer<vtkImageBlend>::New();
@@ -583,7 +592,7 @@ int main()
 
     // Display the image
     vtkSmartPointer<vtkImageActor> actor = vtkSmartPointer<vtkImageActor>::New();
-    actor->SetInputData(blend->GetOutput());
+    actor->SetInputData(colorTop->GetOutput());
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actor);
     vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();
