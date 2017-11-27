@@ -237,9 +237,6 @@ void TestLoadDoseImage()
     for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i += iComponent)
     {
         ptr[i] = imageData[i];
-        ptr[i + 1] = imageData[i + 1];
-        ptr[i + 2] = imageData[i + 2];
-        ptr[i + 3] = imageData[i + 3];
     }
 
     vtkSmartPointer<vtkContourFilter> surface = vtkSmartPointer<vtkContourFilter>::New();
@@ -250,11 +247,8 @@ void TestLoadDoseImage()
     
     vtkSmartPointer<vtkPolyDataMapper> surfMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
     surfMapper->SetInputConnection(surface->GetOutputPort());
-   // surfMapper->ScalarVisibilityOff();
-
-
-
-
+    surfMapper->SetScalarRange(0, 1.2);
+    surfMapper->ScalarVisibilityOff();
 
     vtkSmartPointer<vtkActor> surfActor = vtkSmartPointer<vtkActor>::New();
     surfActor->SetMapper(surfMapper);
