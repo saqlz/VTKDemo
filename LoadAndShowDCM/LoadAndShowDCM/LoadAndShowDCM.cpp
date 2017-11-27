@@ -46,8 +46,10 @@
 #include "vtkImageCanvasSource2D.h"
 #include "vtkImageShrink3D.h" //降采样头文件  
 #include "vtkImageMagnify.h" //升采样头文件 
+#include "vtkMarchingCubes.h"
 
 void TestLoadCTImage();
+void TestLoadDoseImage();
 void TestLoadCTImageReslice();
 void TestBlendCTImageAndDose();
 namespace
@@ -169,8 +171,9 @@ private:
 
 int main()
 {
+    TestLoadDoseImage();
     //TestLoadCTImage();
-    TestLoadCTImageReslice();
+    //TestLoadCTImageReslice();
     //TestBlendCTImageAndDose();
     return 0;
 }
@@ -218,6 +221,59 @@ void TestLoadCTImage()
     viewer->SetupInteractor(rwi);
     rwi->Start();
 }
+
+void TestLoadDoseImage()
+{
+    std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.dat";
+    int iVolumeDimension[3] = { 150, 138, 198 };
+    int iComponent = 1;
+    unsigned int* imageData = LoadRawVolume<unsigned int>(iVolumeDimension, fDoseFilePath, iComponent);
+    vtkSmartPointer<vtkImageData> doseImageData = vtkSmartPointer<vtkImageData>::New();
+    doseImageData->SetDimensions(iVolumeDimension);
+    doseImageData->AllocateScalars(VTK_UNSIGNED_INT, iComponent);
+    doseImageData->SetOrigin(0, 0, 0);
+    doseImageData->SetSpacing(2.5390625, 2.5390625, 2);
+    unsigned int* ptr = reinterpret_cast<unsigned int*>(doseImageData->GetScalarPointer());
+    for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i += iComponent)
+    {
+        ptr[i] = imageData[i];
+        ptr[i + 1] = imageData[i + 1];
+        ptr[i + 2] = imageData[i + 2];
+        ptr[i + 3] = imageData[i + 3];
+    }
+
+    vtkSmartPointer<vtkContourFilter> surface = vtkSmartPointer<vtkContourFilter>::New();
+    surface->SetInputData(doseImageData);
+    surface->ComputeNormalsOn();
+    surface->GenerateValues(5, 0, 300);
+    surface->Update();
+    
+    vtkSmartPointer<vtkPolyDataMapper> surfMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+    surfMapper->SetInputConnection(surface->GetOutputPort());
+   // surfMapper->ScalarVisibilityOff();
+
+
+
+
+
+    vtkSmartPointer<vtkActor> surfActor = vtkSmartPointer<vtkActor>::New();
+    surfActor->SetMapper(surfMapper);
+    surfActor->GetProperty()->SetColor(1.0, 1.0, 0);
+    surfActor->GetProperty()->SetLineWidth(2.0);
+    vtkSmartPointer<vtkRenderer> surfRender = vtkSmartPointer<vtkRenderer>::New();
+    surfRender->AddActor(surfActor);
+    surfRender->SetBackground(0, 0, 0);
+
+    vtkSmartPointer<vtkRenderWindow> window =
+        vtkSmartPointer<vtkRenderWindow>::New();
+    window->AddRenderer(surfRender);
+    window->Render();
+    vtkSmartPointer<vtkRenderWindowInteractor> rwi = vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    window->SetInteractor(rwi);
+    rwi->Start();
+}
+
+
 
 void TestLoadCTImageReslice() 
 {
