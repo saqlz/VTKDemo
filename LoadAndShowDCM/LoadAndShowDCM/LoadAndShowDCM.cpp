@@ -229,45 +229,83 @@ void TestLoadDoseImage()
     int iComponent = 1;
     unsigned int* imageData = LoadRawVolume<unsigned int>(iVolumeDimension, fDoseFilePath, iComponent);
     vtkSmartPointer<vtkImageData> doseImageData = vtkSmartPointer<vtkImageData>::New();
-    doseImageData->SetDimensions(iVolumeDimension);
-    doseImageData->AllocateScalars(VTK_UNSIGNED_INT, iComponent);
+    doseImageData->Initialize();
+    doseImageData->SetDimensions(150, 138, 1);
+    doseImageData->AllocateScalars(VTK_DOUBLE, iComponent);
     doseImageData->SetOrigin(0, 0, 0);
-    doseImageData->SetSpacing(2.5390625, 2.5390625, 2);
-    unsigned int* ptr = reinterpret_cast<unsigned int*>(doseImageData->GetScalarPointer());
-    for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i += iComponent)
+    doseImageData->SetSpacing(2.5390625, 2.5390625, 0);
+    std::map<unsigned int, int> dicCount;
+    double* ptr = reinterpret_cast<double*>(doseImageData->GetScalarPointer());
+    for (int i = iVolumeDimension[0] * iVolumeDimension[1] * 100; i < iVolumeDimension[0] * iVolumeDimension[1] * 101; i++)
     {
-        ptr[i] = imageData[i];
+        double val = imageData[i] * 6.999e-5;
+        ptr[i - iVolumeDimension[0] * iVolumeDimension[1] * 100] = val;
     }
 
+    //  std::cout << dicCount.count << std::endl;
     vtkSmartPointer<vtkContourFilter> surface = vtkSmartPointer<vtkContourFilter>::New();
     surface->SetInputData(doseImageData);
     surface->ComputeNormalsOn();
-    surface->GenerateValues(5, 0, 300);
+    surface->GenerateValues(5, 200, 500);
     surface->Update();
-    
+
+    // Convert to ribbon using vtkRibbonFilter
+    vtkSmartPointer<vtkRibbonFilter> ribbonFilter = vtkSmartPointer<vtkRibbonFilter>::New();
+    ribbonFilter->SetInputData(surface->GetOutput());
+  //  ribbonFilter->SetDefaultNormal(contoursPlane->GetNormal());
+    ribbonFilter->UseDefaultNormalOn();
+    ribbonFilter->SetWidth(0.1);
+    ribbonFilter->SetAngle(90.0);
+    ribbonFilter->Update();
+
+    vtkSmartPointer<vtkPolyDataNormals> normalFilter = vtkSmartPointer<vtkPolyDataNormals>::New();
+    normalFilter->SetInputConnection(ribbonFilter->GetOutputPort());
+    normalFilter->ConsistencyOn();
+    normalFilter->Update();
+
+
+
+    vtkSmartPointer<vtkLookupTable> pColorTable = vtkLookupTable::New();
+    pColorTable->SetNumberOfTableValues(5);
+    pColorTable->SetTableRange(200, 500);
+    pColorTable->SetTableValue(0, 0.517, 0.710, 0.694, 1.0);
+    pColorTable->SetTableValue(1, 0.765, 0.808, 0.572, 1.0);
+    pColorTable->SetTableValue(2, 0.086, 0.521, 0.149, 1.0);
+    pColorTable->SetTableValue(3, 0.580, 0.580, 0.141, 1.0);
+    pColorTable->SetTableValue(4, 0.721, 0.266, 0.027, 1.0);
+//    pColorTable->SetTableValue(5, 0.396, 0.098, 0.003, 1.0);
+//    pColorTable->SetTableValue(6, 0.474, 0.278, 0.149, 1.0);
+//    pColorTable->SetTableValue(7, 0.694, 0.686, 0.698, 1.0);
+    pColorTable->Build();
+
     vtkSmartPointer<vtkPolyDataMapper> surfMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    surfMapper->SetInputConnection(surface->GetOutputPort());
-    surfMapper->SetScalarRange(0, 1.2);
+    surfMapper->SetInputData(normalFilter->GetOutput());
+    surfMapper->SetLookupTable(pColorTable);
+    surfMapper->UseLookupTableScalarRangeOn();
     surfMapper->ScalarVisibilityOff();
+    surfMapper->Update();
+
+    // Create a scalar bar
+    vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
+    scalarBar->SetLookupTable(surfMapper->GetLookupTable());
+    scalarBar->SetTitle("Test");
 
     vtkSmartPointer<vtkActor> surfActor = vtkSmartPointer<vtkActor>::New();
     surfActor->SetMapper(surfMapper);
-    surfActor->GetProperty()->SetColor(1.0, 1.0, 0);
     surfActor->GetProperty()->SetLineWidth(2.0);
+
     vtkSmartPointer<vtkRenderer> surfRender = vtkSmartPointer<vtkRenderer>::New();
     surfRender->AddActor(surfActor);
+    surfRender->AddActor2D(scalarBar);
     surfRender->SetBackground(0, 0, 0);
 
-    vtkSmartPointer<vtkRenderWindow> window =
-        vtkSmartPointer<vtkRenderWindow>::New();
+    vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();
     window->AddRenderer(surfRender);
     window->Render();
     vtkSmartPointer<vtkRenderWindowInteractor> rwi = vtkSmartPointer<vtkRenderWindowInteractor>::New();
     window->SetInteractor(rwi);
     rwi->Start();
 }
-
-
 
 void TestLoadCTImageReslice() 
 {
