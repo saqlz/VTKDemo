@@ -62,6 +62,8 @@
 #include "vtkPolyDataToImageStencil.h"
 #include "vtkImageStencil.h"
 #include "vtkImageCast.h"
+#include "vtkImageStencilToImage.h"
+#include "vtkImageAccumulate.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
