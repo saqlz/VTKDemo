@@ -293,7 +293,7 @@ void TestBlendCTImageAndDose()
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
     tableTop->SetNumberOfTableValues(6);
     tableTop->SetRange(scalarRange[0], scalarRange[1]);
-    tableTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
+    tableTop->SetTableValue(0, 0, 0, 0, 0);
     tableTop->SetTableValue(1, 0.517, 0.710, 0.694, 0.5);
     tableTop->SetTableValue(2, 0.765, 0.808, 0.572, 0.5);
     tableTop->SetTableValue(3, 0.086, 0.521, 0.149, 0.5);
