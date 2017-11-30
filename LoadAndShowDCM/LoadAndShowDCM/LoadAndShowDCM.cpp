@@ -146,6 +146,7 @@ public:
                 matrix->SetElement(1, 3, center[1]);
                 matrix->SetElement(2, 3, center[2]);
 
+                this->ComImageReslice->Update();
                 vtkMatrix4x4 *matrix2 = this->ComImageReslice->GetResliceAxes();
                 matrix2->SetElement(0, 3, center[0]);
                 matrix2->SetElement(1, 3, center[1]);
@@ -189,17 +190,11 @@ int main()
 
 void TestBlendCTImageAndDose()
 {
-    // Matrices for axial, coronal, sagittal, oblique view orientations
-    // Matrices for axial, coronal, sagittal, oblique view orientations
-    static double axialElements[16] = {
-        1, 0, 0, 0,
-        0, -1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1 };
-
     std::string sImagePath = "D:\\GitHub\\WisdomRay\\test\\ctimage.dat";
     int iImageVolumeDimension[3] = { 512, 512, 198 };
     int iImageVolumeComponent = 1;
+    int iRescaleSlope = 1;
+    int iRescaleIntercept = -1024;
     vtkSmartPointer<vtkImageData> ctImageData = vtkSmartPointer<vtkImageData>::New();
     ctImageData->SetDimensions(iImageVolumeDimension);
     ctImageData->AllocateScalars(VTK_SHORT, iImageVolumeComponent);
@@ -209,47 +204,56 @@ void TestBlendCTImageAndDose()
     short* imagePtr = reinterpret_cast<short*>(ctImageData->GetScalarPointer());
     for (int i = 0; i < iImageVolumeDimension[0] * iImageVolumeDimension[1] * iImageVolumeDimension[2] * iImageVolumeComponent; i += iImageVolumeComponent)
     {
-        imagePtr[i] = imageVolumeData[i] * 1 - 1024;
+        imagePtr[i] = imageVolumeData[i] * iRescaleSlope + iRescaleIntercept;
     }
 
     double spacing[3];
     double origin[3];
+    int* extent = ctImageData->GetExtent();
     ctImageData->GetSpacing(spacing);
     ctImageData->GetOrigin(origin);
-    int* bound = ctImageData->GetExtent();
-    double imageCenter[3];
-    imageCenter[0] = origin[0] + spacing[0] * 0.5 * (bound[0] + bound[1]);
-    imageCenter[1] = origin[1] + spacing[1] * 0.5 * (bound[2] + bound[3]);
-    imageCenter[2] = origin[2] + spacing[2] * 0.5 * (bound[4] + bound[5]);
+    double center[3];
+    center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
+    center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
+    center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
+    static double axialElements[16] = {
+        1, 0, 0, 0,
+        0, -1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1 };
 
-    vtkSmartPointer<vtkMatrix4x4> resliceAxesBottom =
+    // Set the slice orientation
+    vtkSmartPointer<vtkMatrix4x4> resliceAxes =
         vtkSmartPointer<vtkMatrix4x4>::New();
-    resliceAxesBottom->DeepCopy(axialElements);
-    resliceAxesBottom->SetElement(0, 3, imageCenter[0]);
-    resliceAxesBottom->SetElement(1, 3, imageCenter[1]);
-    resliceAxesBottom->SetElement(2, 3, imageCenter[2]);
+    resliceAxes->DeepCopy(axialElements);
+    // Set the point through which to slice
+    resliceAxes->SetElement(0, 3, center[0]);
+    resliceAxes->SetElement(1, 3, center[1]);
+    resliceAxes->SetElement(2, 3, center[2]);
 
     // Extract a slice in the desired orientation
-    vtkSmartPointer<vtkImageReslice> resliceBottom =
+    vtkSmartPointer<vtkImageReslice> reslice =
         vtkSmartPointer<vtkImageReslice>::New();
-    resliceBottom->SetInputData(ctImageData);
-    resliceBottom->SetOutputDimensionality(2);
-    resliceBottom->SetResliceAxes(resliceAxesBottom);
-    resliceBottom->SetInterpolationModeToLinear();
-    resliceBottom->Update();
+    reslice->SetInputData(ctImageData);
+    reslice->SetOutputDimensionality(2);
+    reslice->SetResliceAxes(resliceAxes);
+    reslice->SetInterpolationModeToLinear();
 
-    vtkSmartPointer<vtkLookupTable> tableBottom = vtkSmartPointer<vtkLookupTable>::New();
-    tableBottom->SetRange(-300, 350); // image intensity range
-    tableBottom->SetValueRange(0.0, 1.0); // from black to white
-    tableBottom->SetSaturationRange(0.0, 0.0); // no color saturation
-    tableBottom->SetRampToLinear();
-    tableBottom->Build();
+    // Create a greyscale lookup table
+    vtkSmartPointer<vtkLookupTable> table =
+        vtkSmartPointer<vtkLookupTable>::New();
+    table->SetRange(-300, 350); // image intensity range
+    table->SetValueRange(0.0, 1.0); // from black to white
+    table->SetSaturationRange(0.0, 0.0); // no color saturation
+    table->SetRampToLinear();
+    table->Build();
 
-    vtkSmartPointer<vtkImageMapToColors> mapBottom = vtkSmartPointer<vtkImageMapToColors>::New();
-    mapBottom->SetInputConnection(resliceBottom->GetOutputPort());
-    mapBottom->SetLookupTable(tableBottom);
-    mapBottom->Update();
-
+    // Map the image through the lookup table
+    vtkSmartPointer<vtkImageMapToColors> color =
+        vtkSmartPointer<vtkImageMapToColors>::New();
+    color->SetLookupTable(table);
+    color->SetInputConnection(reslice->GetOutputPort());
+    
     //DOSE信息
     std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.raw";
     int iVolumeDimension[3] = { 150, 138, 198 };
@@ -261,17 +265,17 @@ void TestBlendCTImageAndDose()
     doseImageData->SetOrigin(0, 0, 0);
     doseImageData->SetSpacing(2.5390625, 2.5390625, 2);
     double* ptr = reinterpret_cast<double*>(doseImageData->GetScalarPointer());
-    for (int i =0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i += iComponent)
+    for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i += iComponent)
     {
         ptr[i] = imageData[i] * 6.998e-5;
     }
-  
+
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxesTop->DeepCopy(axialElements);
-    resliceAxesTop->SetElement(0, 3, imageCenter[0]);
-    resliceAxesTop->SetElement(1, 3, imageCenter[0]);
-    resliceAxesTop->SetElement(2, 3, imageCenter[2]);
+    resliceAxesTop->SetElement(0, 3, center[0]);
+    resliceAxesTop->SetElement(1, 3, center[0]);
+    resliceAxesTop->SetElement(2, 3, center[2]);
 
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> resliceTop = vtkSmartPointer<vtkImageReslice>::New();
@@ -284,7 +288,7 @@ void TestBlendCTImageAndDose()
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
     tableTop->SetNumberOfTableValues(6);
-    tableTop->SetRange(0, 77);
+    tableTop->SetRange(25, 100);
     tableTop->SetTableValue(0, 0, 0, 0, 0);
     tableTop->SetTableValue(1, 0.517, 0.710, 0.694, 0.5);
     tableTop->SetTableValue(2, 0.765, 0.808, 0.572, 0.5);
@@ -298,16 +302,21 @@ void TestBlendCTImageAndDose()
     colorTop->SetLookupTable(tableTop);
     colorTop->SetInputData(resliceTop->GetOutput());
     colorTop->Update();
-    
+
+    //下面是轮廓线
     vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
     contour->SetInputData(resliceTop->GetOutput());
-    contour->GenerateValues(5, 25, 55);
+    contour->SetNumberOfContours(5);
+    contour->SetValue(0, 30);
+    contour->SetValue(1, 40);
+    contour->SetValue(3, 55);
+    contour->SetValue(4, 60);
     contour->Update();
 
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> contourTop = vtkSmartPointer<vtkLookupTable>::New();
     contourTop->SetNumberOfTableValues(5);
-    contourTop->SetRange(25, 55);
+    contourTop->SetRange(20, 60);
     contourTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
     contourTop->SetTableValue(1, 0.765, 0.808, 0.572, 0.5);
     contourTop->SetTableValue(2, 0.086, 0.521, 0.149, 0.5);
@@ -327,7 +336,7 @@ void TestBlendCTImageAndDose()
     scalarBar->SetTitle("Dose");
 
     double t1 = 324.365234375 - 189.1601543;
-    double t2 =  -1.0* (508.365234375 - 423.9414063);
+    double t2 = -1.0* (508.365234375 - 423.9414063);
     vtkSmartPointer<vtkMatrix4x4> contourToRASMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     static double contourElements[16] = {
         1, 0, 0, t1,
@@ -337,26 +346,35 @@ void TestBlendCTImageAndDose()
 
     contourToRASMatrix->DeepCopy(contourElements);
 
+
     // Display the image
-    vtkSmartPointer<vtkImageActor> bottomActor = vtkSmartPointer<vtkImageActor>::New();
-    bottomActor->SetInputData(mapBottom->GetOutput());
-    vtkSmartPointer<vtkImageActor> topActor = vtkSmartPointer<vtkImageActor>::New();
-    topActor->SetInputData(colorTop->GetOutput());
-    topActor->SetUserMatrix(contourToRASMatrix);
+    vtkSmartPointer<vtkImageActor> actor =
+        vtkSmartPointer<vtkImageActor>::New();
+    actor->GetMapper()->SetInputConnection(color->GetOutputPort());
+
+    vtkSmartPointer<vtkImageActor> actorTop =
+        vtkSmartPointer<vtkImageActor>::New();
+    actorTop->GetMapper()->SetInputConnection(colorTop->GetOutputPort());
+    actorTop->SetUserMatrix(contourToRASMatrix);
 
     vtkSmartPointer<vtkActor> contourActor = vtkSmartPointer<vtkActor>::New();
     contourActor->SetMapper(contourMapper);
     contourActor->SetUserMatrix(contourToRASMatrix);
     contourActor->GetProperty()->SetLineWidth(2);
 
-    vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
-    renderer->AddActor(bottomActor);
-    renderer->AddActor(topActor);
+
+    vtkSmartPointer<vtkRenderer> renderer =
+        vtkSmartPointer<vtkRenderer>::New();
+    renderer->AddActor(actor);
+    renderer->AddActor(actorTop);
     renderer->AddActor(contourActor);
     renderer->AddActor2D(scalarBar);
-    
-    vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();
+
+
+    vtkSmartPointer<vtkRenderWindow> window =
+        vtkSmartPointer<vtkRenderWindow>::New();
     window->AddRenderer(renderer);
+    window->Render();
 
     // Set up the interaction
     vtkSmartPointer<vtkInteractorStyleImage> imageStyle =
@@ -369,7 +387,7 @@ void TestBlendCTImageAndDose()
 
     vtkSmartPointer<vtkImageInteractionCallback> callback =
         vtkSmartPointer<vtkImageInteractionCallback>::New();
-    callback->SetImageReslice(resliceTop, resliceBottom);
+    callback->SetImageReslice(reslice, resliceTop);
     callback->SetInteractor(interactor);
 
     imageStyle->AddObserver(vtkCommand::MouseMoveEvent, callback);
