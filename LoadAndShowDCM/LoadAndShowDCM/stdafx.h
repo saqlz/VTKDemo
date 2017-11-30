@@ -69,6 +69,8 @@
 #include "vtkFloatArray.h"
 #include "vtkCleanPolyData.h"
 #include "vtkCellData.h"
+#include "vtkMarchingSquares.h"
+#include "vtkMarchingContourFilter.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);

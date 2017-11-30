@@ -98,22 +98,28 @@ void TestLoadDoseImage()
     // ‰»Î≤Œ ˝
     int numberOfContours = 5;
     double scalarRange[2] = { 25, 55 };
+
     vtkSmartPointer<vtkAppendPolyData> appendFilledContours = vtkSmartPointer<vtkAppendPolyData>::New();
     double delta = (scalarRange[1] - scalarRange[0]) / static_cast<double> (numberOfContours - 1);
     for (int i = 0; i < numberOfContours; i++)
     {
         double value = scalarRange[0] + static_cast<double> (i) * delta;
-        vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
+        vtkSmartPointer<vtkMarchingSquares> contour = vtkSmartPointer<vtkMarchingSquares>::New();
         contour->SetInputData(doseImageData);
-        contour->ComputeNormalsOn();
         contour->SetValue(0, value);
         contour->Update();
         appendFilledContours->AddInputConnection(contour->GetOutputPort());
     }
-    appendFilledContours->Update();
+    /*appendFilledContours->Update();
     vtkSmartPointer<vtkCleanPolyData> filledContours = vtkSmartPointer<vtkCleanPolyData>::New();
     filledContours->SetInputConnection(appendFilledContours->GetOutputPort());
     filledContours->Update();
+*/
+
+    vtkSmartPointer<vtkMarchingContourFilter> contour = vtkSmartPointer<vtkMarchingContourFilter>::New();
+    contour->SetInputData(doseImageData);
+    contour->GenerateValues(numberOfContours -1, scalarRange);
+    contour->Update();
 
     vtkSmartPointer<vtkLookupTable> lut =
         vtkSmartPointer<vtkLookupTable>::New();
@@ -126,7 +132,7 @@ void TestLoadDoseImage()
     lut->Build();
     vtkSmartPointer<vtkPolyDataMapper> contourMapper =
         vtkSmartPointer<vtkPolyDataMapper>::New();
-    contourMapper->SetInputConnection(filledContours->GetOutputPort());
+    contourMapper->SetInputConnection(contour->GetOutputPort());
     contourMapper->SetScalarRange(scalarRange[0], scalarRange[1]);
     contourMapper->SetLookupTable(lut);
 
