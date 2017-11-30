@@ -153,7 +153,7 @@ void TestLoadDoseImage()
 
     vtkSmartPointer<vtkLookupTable> lut =
         vtkSmartPointer<vtkLookupTable>::New();
-    lut->SetNumberOfTableValues(numberOfContours);
+    lut->SetNumberOfTableValues(5);
     lut->SetTableValue(0, 0.517, 0.710, 0.694, 1.0);
     lut->SetTableValue(1, 0.765, 0.808, 0.572, 1.0);
     lut->SetTableValue(2, 0.086, 0.521, 0.149, 1.0);
