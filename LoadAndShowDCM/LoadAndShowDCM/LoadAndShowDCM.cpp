@@ -181,9 +181,7 @@ private:
 
 int main()
 {
-    //TestLoadDoseImage();
-    //TestLoadCTImage();
-    //TestLoadCTImageReslice();
+   // TestLoadDoseImage();
     TestBlendCTImageAndDose();
     return 0;
 }
@@ -217,10 +215,10 @@ void TestBlendCTImageAndDose()
     center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
     center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
     static double axialElements[16] = {
-        1, 0, 0, 0,
-        0, -1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1 };
+        1,  0,  0,0,
+        0,  0,  -1, 0,
+        0,  -1,  0, 0,
+        0,  0,  0, 1 };
 
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxes =
@@ -293,7 +291,7 @@ void TestBlendCTImageAndDose()
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
     tableTop->SetNumberOfTableValues(6);
     tableTop->SetRange(scalarRange[0], scalarRange[1]);
-    tableTop->SetTableValue(0, 0, 0, 0, 0);
+    tableTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
     tableTop->SetTableValue(1, 0.517, 0.710, 0.694, 0.5);
     tableTop->SetTableValue(2, 0.765, 0.808, 0.572, 0.5);
     tableTop->SetTableValue(3, 0.086, 0.521, 0.149, 0.5);
@@ -345,7 +343,7 @@ void TestBlendCTImageAndDose()
     vtkSmartPointer<vtkMatrix4x4> contourToRASMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     static double contourElements[16] = {
         1, 0, 0, t1,
-        0, 1, 0, t2,
+        0, 1, 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1 };
 
