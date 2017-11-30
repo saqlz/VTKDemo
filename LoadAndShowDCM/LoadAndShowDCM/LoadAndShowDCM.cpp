@@ -108,6 +108,12 @@ void TestLoadDoseImage()
         contour->SetInputData(doseImageData);
         contour->SetValue(0, value);
         contour->Update();
+
+        std::cout << contour->GetOutput()->GetNumberOfCells() << std::endl;
+        std::cout << contour->GetOutput()->GetNumberOfPoints() << std::endl;
+        std::cout << contour->GetOutput()->GetNumberOfLines() << std::endl;
+        std::cout << contour->GetOutput()->GetNumberOfPolys() << std::endl;
+        std::cout << contour->GetOutput()->GetNumberOfStrips() << std::endl;
         appendFilledContours->AddInputConnection(contour->GetOutputPort());
     }
     /*appendFilledContours->Update();
@@ -118,8 +124,15 @@ void TestLoadDoseImage()
 
     vtkSmartPointer<vtkMarchingContourFilter> contour = vtkSmartPointer<vtkMarchingContourFilter>::New();
     contour->SetInputData(doseImageData);
-    contour->GenerateValues(numberOfContours -1, scalarRange);
+    contour->GenerateValues(numberOfContours, scalarRange);
     contour->Update();
+
+    std::cout << contour->GetOutput()->GetNumberOfCells() << std::endl;
+    std::cout << contour->GetOutput()->GetNumberOfPoints() << std::endl;
+    std::cout << contour->GetOutput()->GetNumberOfLines() << std::endl;
+    std::cout << contour->GetOutput()->GetNumberOfPolys() << std::endl;
+    std::cout << contour->GetOutput()->GetNumberOfStrips() << std::endl;
+
 
     vtkSmartPointer<vtkLookupTable> lut =
         vtkSmartPointer<vtkLookupTable>::New();
