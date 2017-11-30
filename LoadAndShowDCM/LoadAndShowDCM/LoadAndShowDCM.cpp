@@ -101,37 +101,91 @@ void TestLoadDoseImage()
     surface->GenerateValues(5, 25, 55);
     surface->Update();
 
-    vtkSmartPointer<vtkLookupTable> pColorTable = vtkLookupTable::New();
-    pColorTable->SetNumberOfTableValues(5);
-    pColorTable->SetTableRange(10, 75);
-    pColorTable->SetTableValue(0, 0.517, 0.710, 0.694, 1.0);
-    pColorTable->SetTableValue(1, 0.765, 0.808, 0.572, 1.0);
-    pColorTable->SetTableValue(2, 0.086, 0.521, 0.149, 1.0);
-    pColorTable->SetTableValue(3, 0.580, 0.580, 0.141, 1.0);
-    pColorTable->SetTableValue(4, 0.721, 0.266, 0.027, 1.0);
-    pColorTable->Build();
+    auto InputPolyData = surface->GetOutput();
+    vtkNew<vtkPolyDataNormals> normalFilter;
+    normalFilter->SetInputData(InputPolyData);
+    normalFilter->ConsistencyOn();
 
-    vtkSmartPointer<vtkPolyDataMapper> surfMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
-    surfMapper->SetInputData(surface->GetOutput());
-    surfMapper->SetLookupTable(pColorTable);
-    surfMapper->UseLookupTableScalarRangeOn();
-    surfMapper->ScalarVisibilityOff();
-    surfMapper->Update();
+    // Make sure that we have a clean triangle polydata
+    vtkNew<vtkTriangleFilter> triangle;
+    triangle->SetInputConnection(normalFilter->GetOutputPort());
+    triangle->Update();
 
-    vtkSmartPointer<vtkActor> surfActor = vtkSmartPointer<vtkActor>::New();
-    surfActor->SetMapper(surfMapper);
-    surfActor->GetProperty()->SetColor(0.517, 0.710, 0.694);
-    surfActor->GetProperty()->SetLineWidth(2.0);
-    vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
-    scalarBar->SetLookupTable(surfMapper->GetLookupTable());
-    scalarBar->SetTitle("Test");
+    // Convert to triangle strip
+    vtkSmartPointer<vtkStripper> stripper = vtkSmartPointer<vtkStripper>::New();
+    stripper->SetInputConnection(triangle->GetOutputPort());
+    stripper->Update();
+
+    int referenceExtents[6] = { 0,149,0,137,0,0 };
+    double origin[3] = { 0,0,0 };
+    vtkSmartPointer<vtkImageData> referenceImage = vtkSmartPointer<vtkImageData>::New();
+    // Blank reference image
+    referenceImage->SetExtent(referenceExtents);
+    referenceImage->SetSpacing(2.5390625, 2.5390625, 0);
+    referenceImage->SetOrigin(origin);
+    referenceImage->AllocateScalars(VTK_DOUBLE, 1);
+    double* refPtr = reinterpret_cast<double*>(referenceImage->GetScalarPointer());
+    memset(refPtr, 0, ((referenceExtents[1] - referenceExtents[0] + 1)*(referenceExtents[3] - referenceExtents[2] + 1)*(referenceExtents[5] - referenceExtents[4] + 1)*referenceImage->GetScalarSize()*referenceImage->GetNumberOfScalarComponents()));
+
+    // Convert polydata to stencil
+    vtkNew<vtkPolyDataToImageStencil> polyToImage;
+    polyToImage->SetInputConnection(stripper->GetOutputPort());
+    polyToImage->SetOutputSpacing(2.5390625, 2.5390625, 0);
+    polyToImage->SetOutputOrigin(origin);
+    polyToImage->SetOutputWholeExtent(referenceExtents);
+    polyToImage->Update();
+
+    // Convert stencil to image
+    vtkNew<vtkImageStencil> stencil;
+    stencil->SetInputData(referenceImage);
+    stencil->SetStencilData(polyToImage->GetOutput());
+    stencil->ReverseStencilOn();
+    stencil->SetBackgroundValue(0);
+    stencil->Update();
+
+
+    /*
+        vtkSmartPointer<vtkLookupTable> pColorTable = vtkLookupTable::New();
+        pColorTable->SetNumberOfTableValues(5);
+        pColorTable->SetTableRange(10, 75);
+        pColorTable->SetTableValue(0, 0.517, 0.710, 0.694, 1.0);
+        pColorTable->SetTableValue(1, 0.765, 0.808, 0.572, 1.0);
+        pColorTable->SetTableValue(2, 0.086, 0.521, 0.149, 1.0);
+        pColorTable->SetTableValue(3, 0.580, 0.580, 0.141, 1.0);
+        pColorTable->SetTableValue(4, 0.721, 0.266, 0.027, 1.0);
+        pColorTable->Build();
+
+        vtkSmartPointer<vtkPolyDataMapper> surfMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+        surfMapper->SetInputData(surface->GetOutput());
+        surfMapper->SetLookupTable(pColorTable);
+        surfMapper->UseLookupTableScalarRangeOn();
+        surfMapper->ScalarVisibilityOff();
+        surfMapper->Update();
+
+        vtkSmartPointer<vtkActor> surfActor = vtkSmartPointer<vtkActor>::New();
+        surfActor->SetMapper(surfMapper);
+        surfActor->GetProperty()->SetColor(0.517, 0.710, 0.694);
+        surfActor->GetProperty()->SetLineWidth(2.0);
+        vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
+        scalarBar->SetLookupTable(surfMapper->GetLookupTable());
+        scalarBar->SetTitle("Test");
+    */
+
+    vtkNew<vtkImageCast> imageCast;
+    imageCast->SetInputConnection(stencil->GetOutputPort());
+    imageCast->SetOutputScalarTypeToDouble();
+    imageCast->Update();
+    auto OutputLabelmap = vtkSmartPointer<vtkImageData>::New();
+    OutputLabelmap->ShallowCopy(imageCast->GetOutput());
 
     vtkSmartPointer<vtkImageActor> allActor = vtkSmartPointer<vtkImageActor>::New();
-    allActor->SetInputData(doseImageData);
+    allActor->SetInputData(OutputLabelmap);
+    vtkSmartPointer<vtkImageActor> doseActor = vtkSmartPointer<vtkImageActor>::New();
+    doseActor->SetInputData(doseImageData);
     vtkSmartPointer<vtkRenderer> surfRender = vtkSmartPointer<vtkRenderer>::New();
     surfRender->AddActor(allActor);
-    surfRender->AddActor(surfActor);
-    surfRender->AddActor2D(scalarBar);
+   // surfRender->AddActor(doseActor);
+   // surfRender->AddActor2D(scalarBar);
     surfRender->SetBackground(0, 0, 0);
 
     vtkSmartPointer<vtkRenderWindow> window = vtkSmartPointer<vtkRenderWindow>::New();

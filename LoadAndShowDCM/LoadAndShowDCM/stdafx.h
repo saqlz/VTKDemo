@@ -58,6 +58,10 @@
 #include "vtkImageBlend.h"
 #include "vtkScalarBarActor.h"
 #include "vtkRibbonFilter.h"
+#include "vtkTriangleFilter.h"
+#include "vtkPolyDataToImageStencil.h"
+#include "vtkImageStencil.h"
+#include "vtkImageCast.h"
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);
