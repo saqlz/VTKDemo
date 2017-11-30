@@ -322,6 +322,45 @@ void TestBlendCTImageAndDose()
     contourMapper->UseLookupTableScalarRangeOn();
     contourMapper->SetLookupTable(contourTop);
 
+
+
+    //////重采样
+    //vtkSmartPointer<vtkImageMagnify> magnifyFilter = vtkSmartPointer<vtkImageMagnify>::New();
+    //magnifyFilter->SetInputData(colorTop->GetOutput());
+    //magnifyFilter->SetMagnificationFactors(2.5390625 / spacing[0], 2.5390625 / spacing[0], 1);
+    //magnifyFilter->InterpolateOn();
+    //magnifyFilter->Update();
+
+    // int originalDims[3];
+    // reader->GetOutput()->GetDimensions(originalDims);
+    // double originalSpacing[3];
+    // reader->GetOutput()->GetSpacing(originalSpacing);
+    // int magnifyDims[3];
+    //// magnifyFilter->GetOutput()->GetDimensions(magnifyDims);
+    // double magnifuSpacing[3];
+    // //magnifyFilter->GetOutput()->GetSpacing(magnifuSpacing);
+    // std::cout << "原始维度：      " << originalDims[0] << "*" << originalDims[1] << "*" << originalDims[2] << std::endl;
+    // std::cout << "原始像素间距：  " << originalSpacing[0] << " " << originalSpacing[1] << " " << originalSpacing[2] << std::endl;
+    // std::cout << "升采样维度：    " << magnifyDims[0] << "*" << magnifyDims[1] << "*" << magnifyDims[2] << std::endl;
+    // std::cout << "升采样像素间距：" << magnifuSpacing[0] << " " << magnifuSpacing[1] << " " << magnifuSpacing[2] << std::endl;
+
+
+    //vtkSmartPointer<vtkImageCanvasSource2D> drawing = vtkSmartPointer<vtkImageCanvasSource2D>::New();
+    //drawing->SetNumberOfScalarComponents(4);
+    //drawing->SetScalarTypeToUnsignedChar();
+    //drawing->SetExtent(0, 511, 0, 511, 0, 0);
+    //drawing->DrawImage((324.365234375 - 189.1601543) / spacing[0], 512 - 138 * 2 - ((508.365234375 - 423.9414063) / spacing[1]), 
+    //    colorTop->GetOutput());
+    //drawing->Update();
+
+    //vtkSmartPointer<vtkImageBlend> blend = vtkSmartPointer<vtkImageBlend>::New();
+    //blend->SetBlendModeToCompound();
+    //blend->AddInputData(mapBottom->GetOutput());
+    //blend->AddInputData(drawing->GetOutput());
+    //blend->SetOpacity(0, 0.5);
+    //blend->SetOpacity(1, 0.5);
+    //blend->Update();
+
     vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
     scalarBar->SetLookupTable(contourTop);
     scalarBar->SetTitle("Dose");
