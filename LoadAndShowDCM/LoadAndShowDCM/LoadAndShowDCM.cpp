@@ -270,6 +270,10 @@ void TestBlendCTImageAndDose()
         ptr[i] = imageData[i] * 6.998e-5;
     }
 
+    //体素中最值
+    double scalarRange[2];
+    doseImageData->GetScalarRange(scalarRange);
+
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxesTop->DeepCopy(axialElements);
@@ -288,8 +292,8 @@ void TestBlendCTImageAndDose()
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
     tableTop->SetNumberOfTableValues(6);
-    tableTop->SetRange(25, 100);
-    tableTop->SetTableValue(0, 0, 0, 0, 0);
+    tableTop->SetRange(scalarRange[0], scalarRange[1]);
+    tableTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
     tableTop->SetTableValue(1, 0.517, 0.710, 0.694, 0.5);
     tableTop->SetTableValue(2, 0.765, 0.808, 0.572, 0.5);
     tableTop->SetTableValue(3, 0.086, 0.521, 0.149, 0.5);
@@ -307,8 +311,9 @@ void TestBlendCTImageAndDose()
     vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
     contour->SetInputData(resliceTop->GetOutput());
     contour->SetNumberOfContours(5);
-    contour->SetValue(0, 30);
-    contour->SetValue(1, 40);
+    contour->SetValue(0, 10);
+    contour->SetValue(1, 24);
+    contour->SetValue(2, 40);
     contour->SetValue(3, 55);
     contour->SetValue(4, 60);
     contour->Update();
@@ -316,7 +321,7 @@ void TestBlendCTImageAndDose()
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> contourTop = vtkSmartPointer<vtkLookupTable>::New();
     contourTop->SetNumberOfTableValues(5);
-    contourTop->SetRange(20, 60);
+    contourTop->SetRange(scalarRange[0], scalarRange[1]);
     contourTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
     contourTop->SetTableValue(1, 0.765, 0.808, 0.572, 0.5);
     contourTop->SetTableValue(2, 0.086, 0.521, 0.149, 0.5);
