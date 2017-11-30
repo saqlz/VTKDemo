@@ -95,60 +95,24 @@ void TestLoadDoseImage()
         ptr[i - iVolumeDimension[0] * iVolumeDimension[1] * 94] = val;
     }
 
-    vtkSmartPointer<vtkContourFilter> surface = vtkSmartPointer<vtkContourFilter>::New();
-    surface->SetInputData(doseImageData);
-    surface->ComputeNormalsOn();
-    surface->GenerateValues(5, 25, 55);
-    surface->Update();
-
-    double scalarRange[2];
-    surface->GetOutput()->GetScalarRange(scalarRange);
-    vtkSmartPointer<vtkAppendPolyData> appendFilledContours = vtkSmartPointer<vtkAppendPolyData>::New();
+    // ‰»Î≤Œ ˝
     int numberOfContours = 5;
+    double scalarRange[2] = { 25, 55 };
+    vtkSmartPointer<vtkAppendPolyData> appendFilledContours = vtkSmartPointer<vtkAppendPolyData>::New();
     double delta = (scalarRange[1] - scalarRange[0]) / static_cast<double> (numberOfContours - 1);
-    std::vector<vtkSmartPointer<vtkClipPolyData> > clippersLo;
-    std::vector<vtkSmartPointer<vtkClipPolyData> > clippersHi;
-
     for (int i = 0; i < numberOfContours; i++)
     {
-        double valueLo = scalarRange[0] + static_cast<double> (i) * delta;
-        double valueHi = scalarRange[0] + static_cast<double> (i + 1) * delta;
-        clippersLo.push_back(vtkSmartPointer<vtkClipPolyData>::New());
-        clippersLo[i]->SetValue(valueLo);
-        if (i == 0)
-        {
-            clippersLo[i]->SetInputData(doseImageData);
-        }
-        else
-        {
-            clippersLo[i]->SetInputConnection(clippersHi[i - 1]->GetOutputPort(1));
-        }
-        clippersLo[i]->InsideOutOff();
-        clippersLo[i]->Update();
-
-        clippersHi.push_back(vtkSmartPointer<vtkClipPolyData>::New());
-        clippersHi[i]->SetValue(valueHi);
-        clippersHi[i]->SetInputConnection(clippersLo[i]->GetOutputPort());
-        clippersHi[i]->GenerateClippedOutputOn();
-        clippersHi[i]->InsideOutOn();
-        clippersHi[i]->Update();
-        if (clippersHi[i]->GetOutput()->GetNumberOfCells() == 0)
-        {
-            continue;
-        }
-
-        vtkSmartPointer<vtkFloatArray> cd =  vtkSmartPointer<vtkFloatArray>::New();
-        cd->SetNumberOfComponents(1);
-        cd->SetNumberOfTuples(clippersHi[i]->GetOutput()->GetNumberOfCells());
-        cd->FillComponent(0, valueLo);
-
-        clippersHi[i]->GetOutput()->GetCellData()->SetScalars(cd);
-        appendFilledContours->AddInputConnection(clippersHi[i]->GetOutputPort());
+        double value = scalarRange[0] + static_cast<double> (i) * delta;
+        vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
+        contour->SetInputData(doseImageData);
+        contour->ComputeNormalsOn();
+        contour->SetValue(0, value);
+        contour->Update();
+        appendFilledContours->AddInputConnection(contour->GetOutputPort());
     }
-
-    vtkSmartPointer<vtkCleanPolyData> filledContours =
-        vtkSmartPointer<vtkCleanPolyData>::New();
-    filledContours->SetInputConnection(surface->GetOutputPort());
+    appendFilledContours->Update();
+    vtkSmartPointer<vtkCleanPolyData> filledContours = vtkSmartPointer<vtkCleanPolyData>::New();
+    filledContours->SetInputConnection(appendFilledContours->GetOutputPort());
     filledContours->Update();
 
     vtkSmartPointer<vtkLookupTable> lut =
