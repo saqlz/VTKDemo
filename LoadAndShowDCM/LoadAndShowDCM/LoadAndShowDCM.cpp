@@ -188,37 +188,28 @@ int main()
 
 void TestBlendCTImageAndDose()
 {
-    std::string sImagePath = "D:\\GitHub\\WisdomRay\\test\\ctimage.dat";
-    int iImageVolumeDimension[3] = { 512, 512, 198 };
-    int iImageVolumeComponent = 1;
-    int iRescaleSlope = 1;
-    int iRescaleIntercept = -1024;
-    vtkSmartPointer<vtkImageData> ctImageData = vtkSmartPointer<vtkImageData>::New();
-    ctImageData->SetDimensions(iImageVolumeDimension);
-    ctImageData->AllocateScalars(VTK_SHORT, iImageVolumeComponent);
-    ctImageData->SetOrigin(0, 0, 0);
-    ctImageData->SetSpacing(1.26953125, 1.26953125, 2);
-    short* imageVolumeData = LoadRawVolume<short>(iImageVolumeDimension, sImagePath, iImageVolumeComponent);
-    short* imagePtr = reinterpret_cast<short*>(ctImageData->GetScalarPointer());
-    for (int i = 0; i < iImageVolumeDimension[0] * iImageVolumeDimension[1] * iImageVolumeDimension[2] * iImageVolumeComponent; i += iImageVolumeComponent)
-    {
-        imagePtr[i] = imageVolumeData[i] * iRescaleSlope + iRescaleIntercept;
-    }
+    // Matrices for axial, coronal, sagittal, oblique view orientations
+    static double axialElements[16] = {
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1 };
 
+    std::string sPath = "E:\\Images\\Reg\\FanGuozeng\\FanGuozeng_CT\\";
+    vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    reader->SetDataByteOrderToLittleEndian();
+    reader->SetDirectoryName(sPath.c_str());
+    reader->Update();
+    int extent[6];
     double spacing[3];
     double origin[3];
-    int* extent = ctImageData->GetExtent();
-    ctImageData->GetSpacing(spacing);
-    ctImageData->GetOrigin(origin);
+    reader->GetOutputInformation(0)->Get(vtkStreamingDemandDrivenPipeline::WHOLE_EXTENT(), extent);
+    reader->GetOutput()->GetSpacing(spacing);
+    reader->GetOutput()->GetOrigin(origin);
     double center[3];
     center[0] = origin[0] + spacing[0] * 0.5 * (extent[0] + extent[1]);
     center[1] = origin[1] + spacing[1] * 0.5 * (extent[2] + extent[3]);
     center[2] = origin[2] + spacing[2] * 0.5 * (extent[4] + extent[5]);
-    static double axialElements[16] = {
-        1,  0,  0,0,
-        0,  0,  -1, 0,
-        0,  -1,  0, 0,
-        0,  0,  0, 1 };
 
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxes =
@@ -232,7 +223,7 @@ void TestBlendCTImageAndDose()
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> reslice =
         vtkSmartPointer<vtkImageReslice>::New();
-    reslice->SetInputData(ctImageData);
+    reslice->SetInputData(reader->GetOutput());
     reslice->SetOutputDimensionality(2);
     reslice->SetResliceAxes(resliceAxes);
     reslice->SetInterpolationModeToLinear();
@@ -253,35 +244,26 @@ void TestBlendCTImageAndDose()
     color->SetInputConnection(reslice->GetOutputPort());
     
     //DOSE信息
-    std::string fDoseFilePath = "D:\\GitHub\\WisdomRay\\appdata\\dose.raw";
-    int iVolumeDimension[3] = { 150, 138, 198 };
-    int iComponent = 1;
-    unsigned int* imageData = LoadRawVolume<unsigned int>(iVolumeDimension, fDoseFilePath, iComponent);
-    vtkSmartPointer<vtkImageData> doseImageData = vtkSmartPointer<vtkImageData>::New();
-    doseImageData->SetDimensions(iVolumeDimension);
-    doseImageData->AllocateScalars(VTK_DOUBLE, iComponent);
-    doseImageData->SetOrigin(0, 0, 0);
-    doseImageData->SetSpacing(2.5390625, 2.5390625, 2);
-    double* ptr = reinterpret_cast<double*>(doseImageData->GetScalarPointer());
-    for (int i = 0; i < iVolumeDimension[0] * iVolumeDimension[1] * iVolumeDimension[2] * iComponent; i += iComponent)
-    {
-        ptr[i] = imageData[i] * 6.998e-5;
-    }
-
+    std::string sPathTop = "E:\\Images\\Reg\\FanGuozeng\\FanGuozeng_MRI\\";
+    vtkSmartPointer<vtkDICOMImageReader> readerTop = vtkSmartPointer<vtkDICOMImageReader>::New();
+    readerTop->SetDataByteOrderToLittleEndian();
+    readerTop->SetDirectoryName(sPathTop.c_str());
+    readerTop->Update();
+   
     //体素中最值
     double scalarRange[2];
-    doseImageData->GetScalarRange(scalarRange);
+    readerTop->GetOutput()->GetScalarRange(scalarRange);
 
     // Set the slice orientation
     vtkSmartPointer<vtkMatrix4x4> resliceAxesTop = vtkSmartPointer<vtkMatrix4x4>::New();
     resliceAxesTop->DeepCopy(axialElements);
     resliceAxesTop->SetElement(0, 3, center[0]);
-    resliceAxesTop->SetElement(1, 3, center[0]);
+    resliceAxesTop->SetElement(1, 3, center[1]);
     resliceAxesTop->SetElement(2, 3, center[2]);
 
     // Extract a slice in the desired orientation
     vtkSmartPointer<vtkImageReslice> resliceTop = vtkSmartPointer<vtkImageReslice>::New();
-    resliceTop->SetInputData(doseImageData);
+    resliceTop->SetInputData(readerTop->GetOutput());
     resliceTop->SetOutputDimensionality(2);
     resliceTop->SetResliceAxes(resliceAxesTop);
     resliceTop->SetInterpolationModeToLinear();
@@ -289,14 +271,10 @@ void TestBlendCTImageAndDose()
 
     // Create a greyscale lookup table
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
-    tableTop->SetNumberOfTableValues(6);
-    tableTop->SetRange(scalarRange[0], scalarRange[1]);
-    tableTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
-    tableTop->SetTableValue(1, 0.517, 0.710, 0.694, 0.5);
-    tableTop->SetTableValue(2, 0.765, 0.808, 0.572, 0.5);
-    tableTop->SetTableValue(3, 0.086, 0.521, 0.149, 0.5);
-    tableTop->SetTableValue(4, 0.580, 0.580, 0.141, 0.5);
-    tableTop->SetTableValue(5, 0.721, 0.266, 0.027, 0.5);
+    tableTop->SetNumberOfTableValues(2);
+    tableTop->SetRange(6169, 13000);
+    tableTop->SetTableValue(0, 0, 0, 0, 0);
+    tableTop->SetTableValue(1, 255 / 255, 165 / 255, 0, 0.6);
     tableTop->Build();
 
     // Map the image through the lookup table
@@ -305,45 +283,13 @@ void TestBlendCTImageAndDose()
     colorTop->SetInputData(resliceTop->GetOutput());
     colorTop->Update();
 
-    //下面是轮廓线
-    vtkSmartPointer<vtkContourFilter> contour = vtkSmartPointer<vtkContourFilter>::New();
-    contour->SetInputData(resliceTop->GetOutput());
-    contour->SetNumberOfContours(5);
-    contour->SetValue(0, 10);
-    contour->SetValue(1, 24);
-    contour->SetValue(2, 40);
-    contour->SetValue(3, 55);
-    contour->SetValue(4, 60);
-    contour->Update();
-
-    // Create a greyscale lookup table
-    vtkSmartPointer<vtkLookupTable> contourTop = vtkSmartPointer<vtkLookupTable>::New();
-    contourTop->SetNumberOfTableValues(5);
-    contourTop->SetRange(scalarRange[0], scalarRange[1]);
-    contourTop->SetTableValue(0, 0.517, 0.710, 0.694, 0.5);
-    contourTop->SetTableValue(1, 0.765, 0.808, 0.572, 0.5);
-    contourTop->SetTableValue(2, 0.086, 0.521, 0.149, 0.5);
-    contourTop->SetTableValue(3, 0.580, 0.580, 0.141, 0.5);
-    contourTop->SetTableValue(4, 0.721, 0.266, 0.027, 0.5);
-    contourTop->Build();
-
-    vtkSmartPointer<vtkPolyDataMapper> contourMapper =
-        vtkSmartPointer<vtkPolyDataMapper>::New();
-    contourMapper->SetInputConnection(contour->GetOutputPort());
-    contourMapper->SetInterpolateScalarsBeforeMapping(1);
-    contourMapper->UseLookupTableScalarRangeOn();
-    contourMapper->SetLookupTable(contourTop);
-
-    vtkSmartPointer<vtkScalarBarActor> scalarBar = vtkSmartPointer<vtkScalarBarActor>::New();
-    scalarBar->SetLookupTable(contourTop);
-    scalarBar->SetTitle("Dose");
-
+   
     double t1 = 324.365234375 - 189.1601543;
     double t2 = -1.0* (508.365234375 - 423.9414063);
     vtkSmartPointer<vtkMatrix4x4> contourToRASMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     static double contourElements[16] = {
-        1, 0, 0, t1,
-        0, 1, 0, 0,
+        1, 0, 0, 94,
+        0, 1, 0, 100,
         0, 0, 1, 0,
         0, 0, 0, 1 };
 
@@ -360,18 +306,15 @@ void TestBlendCTImageAndDose()
     actorTop->GetMapper()->SetInputConnection(colorTop->GetOutputPort());
     actorTop->SetUserMatrix(contourToRASMatrix);
 
-    vtkSmartPointer<vtkActor> contourActor = vtkSmartPointer<vtkActor>::New();
-    contourActor->SetMapper(contourMapper);
-    contourActor->SetUserMatrix(contourToRASMatrix);
-    contourActor->GetProperty()->SetLineWidth(2);
+  
 
 
     vtkSmartPointer<vtkRenderer> renderer =
         vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actor);
     renderer->AddActor(actorTop);
-    renderer->AddActor(contourActor);
-    renderer->AddActor2D(scalarBar);
+   // renderer->AddActor(contourActor);
+   // renderer->AddActor2D(scalarBar);
 
 
     vtkSmartPointer<vtkRenderWindow> window =
