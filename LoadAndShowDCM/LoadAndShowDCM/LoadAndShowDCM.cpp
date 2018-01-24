@@ -147,10 +147,12 @@ public:
                 matrix->SetElement(2, 3, center[2]);
 
                 this->ComImageReslice->Update();
+                double center2[4];
                 vtkMatrix4x4 *matrix2 = this->ComImageReslice->GetResliceAxes();
-                matrix2->SetElement(0, 3, center[0]);
-                matrix2->SetElement(1, 3, center[1]);
-                matrix2->SetElement(2, 3, center[2]);
+                matrix2->MultiplyPoint(point, center2);
+                matrix2->SetElement(0, 3, center2[0]);
+                matrix2->SetElement(1, 3, center2[1]);
+                matrix2->SetElement(2, 3, center2[2]);
                
                 interactor->Render();
             }
@@ -201,7 +203,8 @@ void TestBlendCTImageAndDose()
     std::string sBottomImagePath = "D:\\GitHub\\DeepPlan\\TestCT.raw";
     int iBottomImageVolumeDimension[3] = { 512, 512, 53 };
     int iBottomImageVolumeComponent = 1;
-    double dBottomOrigin[3] = { -233.0439453125, -327.0439453125, 410 };
+    //double dBottomOrigin[3] = { -233.0439453125, -327.0439453125, 410 };
+    double dBottomOrigin[3] = {0, 0, 0};
     double dBottomSpacing[3] = { 0.912109375, 0.912109375, 5 };
     vtkSmartPointer<vtkImageData> bottomImageData = vtkSmartPointer<vtkImageData>::New();
     bottomImageData->SetDimensions(iBottomImageVolumeDimension);
@@ -219,7 +222,8 @@ void TestBlendCTImageAndDose()
     std::string sTopImagePath = "D:\\GitHub\\DeepPlan\\TestMR.raw";
     int iTopImageVolumeDimension[3] = { 512, 512, 248 };
     int iTopImageVolumeComponent = 1;
-    double dTopOrigin[3] = { -113.619, -150.906, -110.923 };
+    //double dTopOrigin[3] = { -113.619, -150.906, -110.923 };
+    double dTopOrigin[3] = {0, 0, 0};
     double dTopSpacing[3] = { 0.4688, 0.4688, 0.9 };
     vtkSmartPointer<vtkImageData> topImageData = vtkSmartPointer<vtkImageData>::New();
     topImageData->SetDimensions(iTopImageVolumeDimension);
@@ -236,7 +240,8 @@ void TestBlendCTImageAndDose()
     double centerBottom[3];
     centerBottom[0] = dBottomOrigin[0];
     centerBottom[1] = dBottomOrigin[1];
-    centerBottom[2] = dBottomOrigin[2] + dBottomSpacing[2] * 0.5 * iBottomImageVolumeDimension[2];
+    centerBottom[2] = dBottomOrigin[2]; // + dBottomSpacing[2] * 0.5 * iBottomImageVolumeDimension[2];
+    
     vtkSmartPointer<vtkMatrix4x4> resliceMatrixBttom = vtkSmartPointer<vtkMatrix4x4>::New();
     resliceMatrixBttom->DeepCopy(axialElements);
     resliceMatrixBttom->SetElement(0, 3, centerBottom[0]);
@@ -262,10 +267,23 @@ void TestBlendCTImageAndDose()
     actorBottom->GetMapper()->SetInputConnection(colorBottom->GetOutputPort());
     
     vtkSmartPointer<vtkMatrix4x4> resliceMatrixTop = vtkSmartPointer<vtkMatrix4x4>::New();
-    resliceMatrixTop->DeepCopy(axialElements);
-    resliceMatrixTop->SetElement(0, 3, centerBottom[0]);
-    resliceMatrixTop->SetElement(1, 3, centerBottom[1]);
-    resliceMatrixTop->SetElement(2, 3, centerBottom[2]);
+    static double axialElementsTop[16] = {
+        0.994037, 0.106591, -0.0230048, 0,
+        -0.108939, 0.961397, -0.252682, 0,
+        -0.00481705, 0.253682, 0.967276, -100.7,
+         0, 0, 0, 1 };
+
+    resliceMatrixTop->DeepCopy(axialElementsTop);
+    double centerTop[4];
+    double pointTop[4];
+    pointTop[0] = centerBottom[0];
+    pointTop[1] = centerBottom[1];
+    pointTop[2] = centerBottom[2];
+    pointTop[3] = 1.0;
+    resliceMatrixTop->MultiplyPoint(pointTop, centerTop);
+    resliceMatrixTop->SetElement(0, 3, centerTop[0]);
+    resliceMatrixTop->SetElement(1, 3, centerTop[1]);
+    resliceMatrixTop->SetElement(2, 3, centerTop[2]);
     vtkSmartPointer<vtkImageReslice> resliceTop = vtkSmartPointer<vtkImageReslice>::New();
     resliceTop->SetInputData(topImageData);
     resliceTop->SetOutputDimensionality(2);
@@ -274,11 +292,11 @@ void TestBlendCTImageAndDose()
     resliceTop->Update();
 
     vtkSmartPointer<vtkLookupTable> tableTop = vtkSmartPointer<vtkLookupTable>::New();
-    tableTop->SetTableRange(0, 18000);
+    tableTop->SetTableRange(0, 12000);
     tableTop->SetValueRange(0.3, 0.8);
     tableTop->SetSaturationRange(0.0, 1.0);
     tableTop->SetHueRange(0.12, 0.12);
-    tableTop->SetAlphaRange(0.8, 0.8);
+    tableTop->SetAlphaRange(0.5, 1);
     tableTop->Build();
     vtkSmartPointer<vtkImageMapToColors> colorTop = vtkSmartPointer<vtkImageMapToColors>::New();
     colorTop->SetLookupTable(tableTop);
@@ -288,12 +306,12 @@ void TestBlendCTImageAndDose()
 
     vtkSmartPointer<vtkMatrix4x4> contourToRASMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
     static double contourElements[16] = {
-        1, 0, 0, 115.249,
-        0, 1, 0, 106.448,
+        1, 0, 0, 113.4872,
+        0, 1, 0, 70,
         0, 0, 1, 0,
         0, 0, 0, 1 };
     contourToRASMatrix->DeepCopy(contourElements);
-    //actorTop->SetUserMatrix(contourToRASMatrix);
+    actorTop->SetUserMatrix(contourToRASMatrix);
 
     vtkSmartPointer<vtkRenderer> renderer = vtkSmartPointer<vtkRenderer>::New();
     renderer->AddActor(actorBottom);
