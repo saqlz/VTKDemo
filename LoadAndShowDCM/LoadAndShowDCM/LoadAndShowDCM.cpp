@@ -55,6 +55,7 @@
 #include "vtkTransform.h"
 #include "vtkTransformPolyDataFilter.h"
 #include "vtkPlanarContourToClosedSurfaceConversionRule.h"
+#include "vtkPlanarContourToRibbonModelConversionRule.h"
 
 
 void TestBlendCTImageAndDose();
@@ -394,9 +395,14 @@ void TestLoadContour()
     currentRoiPolyData->SetPoints(currentRoiContourPoints);
     currentRoiPolyData->SetLines(currentRoiContourCells);
 
+    vtkPlanarContourToRibbonModelConversionRule rule;
+    vtkSmartPointer<vtkPolyData> outRoiPolyData = vtkSmartPointer<vtkPolyData>::New();
+    rule.Convert(currentRoiPolyData, outRoiPolyData);
+
+
     vtkSmartPointer<vtkPolyDataMapper> mapper =
         vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData(currentRoiPolyData);
+    mapper->SetInputData(outRoiPolyData);
 
     vtkSmartPointer<vtkActor> actor =
         vtkSmartPointer<vtkActor>::New();
