@@ -2,7 +2,8 @@
 //
 
 #include "stdafx.h"
-
+#include <stdio.h> 
+#include <string.h> 
 
 #include "vtkSmartPointer.h"
 #include "vtkMetaImageReader.h"
@@ -50,8 +51,15 @@
 #include "vtkImageData.h"
 #include <vtkDataSet.h>
 #include <vtkDataSetMapper.h>
+#include <vector>
+#include "vtkTransform.h"
+#include "vtkTransformPolyDataFilter.h"
+#include "vtkPlanarContourToClosedSurfaceConversionRule.h"
+
 
 void TestBlendCTImageAndDose();
+void TestLoadContour();
+
 namespace
 {
     template<typename T>
@@ -185,7 +193,8 @@ private:
 int main()
 {
    // TestLoadDoseImage();
-    TestBlendCTImageAndDose();
+    //TestBlendCTImageAndDose();
+    TestLoadContour();
     return 0;
 }
 
@@ -344,7 +353,69 @@ void TestBlendCTImageAndDose()
     interactor->Start();
 }
 
+void TestLoadContour() 
+{
+    // Create containers for contour poly data
+    vtkSmartPointer<vtkPoints> currentRoiContourPoints = vtkSmartPointer<vtkPoints>::New();
+    vtkSmartPointer<vtkCellArray> currentRoiContourCells = vtkSmartPointer<vtkCellArray>::New();
+    
+    std::string sBottomImagePath = "D:\\GitHub\\WisdomRay\\WisdomRay\\appdata\\ContourData.txt";
+    std::ifstream infile(sBottomImagePath, std::ios::in);
+    std::string lineStr;
+    vtkIdType pointId = 0;
+    std::vector<float> vecPoints;
+    while (std::getline(infile, lineStr))
+    {
+        if (lineStr.find("Contour") != std::string::npos)
+        {
+            if (!vecPoints.empty()) 
+            {
+                int numberOfPoints = (int)(vecPoints.size() / 3);
+                int contourIndex = currentRoiContourCells->InsertNextCell(numberOfPoints + 1);
+                for (size_t i = 0; i < vecPoints.size(); i += 3)
+                {
+                    currentRoiContourPoints->InsertPoint(pointId, vecPoints[i], vecPoints[i+1], vecPoints[i+2]);
+                    currentRoiContourCells->InsertCellPoint(pointId);
+                    pointId++;
+                }
+                currentRoiContourCells->InsertCellPoint(pointId - numberOfPoints);
+            }
+            vecPoints.clear();
+            continue;
+        }
+        float px, py, pz;
+        sscanf(lineStr.c_str(), "%f,%f,%f", &px, &py, &pz);
+        vecPoints.push_back(px);
+        vecPoints.push_back(py);
+        vecPoints.push_back(pz);
+    }
 
+    vtkSmartPointer<vtkPolyData> currentRoiPolyData = vtkSmartPointer<vtkPolyData>::New();
+    currentRoiPolyData->SetPoints(currentRoiContourPoints);
+    currentRoiPolyData->SetLines(currentRoiContourCells);
 
+    vtkSmartPointer<vtkPolyDataMapper> mapper =
+        vtkSmartPointer<vtkPolyDataMapper>::New();
+    mapper->SetInputData(currentRoiPolyData);
 
+    vtkSmartPointer<vtkActor> actor =
+        vtkSmartPointer<vtkActor>::New();
+    actor->SetMapper(mapper);
 
+    vtkSmartPointer<vtkRenderer> render =
+        vtkSmartPointer<vtkRenderer>::New();
+    render->AddActor(actor);
+    render->SetBackground(0.0, 0.0, 0.0);
+
+    vtkSmartPointer<vtkRenderWindow> rw =
+        vtkSmartPointer<vtkRenderWindow>::New();
+    rw->AddRenderer(render);
+    rw->SetSize(320, 240);
+    rw->SetWindowName("Creating PolyData Structure");
+
+    vtkSmartPointer<vtkRenderWindowInteractor> rwi =
+        vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    rwi->SetRenderWindow(rw);
+    rwi->Render();
+    rwi->Start();
+}
