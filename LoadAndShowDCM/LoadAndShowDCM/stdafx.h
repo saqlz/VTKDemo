@@ -71,6 +71,15 @@
 #include "vtkCellData.h"
 #include "vtkMarchingSquares.h"
 #include "vtkMarchingContourFilter.h"
+#include "vtkPolygon.h"
+#include "vtkTriangle.h"
+#include "vtkCutter.h"
+#include "vtkGeneralTransform.h"
+#include "vtkCutter.h"
+#include "vtkPolyDataMapper2D.h"
+#include "vtkPlane.h"
+
+
 
 VTK_MODULE_INIT(vtkRenderingOpenGL2);
 VTK_MODULE_INIT(vtkInteractionStyle);

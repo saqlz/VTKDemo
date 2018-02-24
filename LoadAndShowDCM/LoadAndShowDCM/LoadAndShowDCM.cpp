@@ -91,32 +91,32 @@ public:
     };
 
     vtkImageInteractionCallback() {
-        this->Slicing = 0;
-        this->ImageReslice = 0;
-        this->ComImageReslice = 0;
-        this->Interactor = 0;
+        Slicing = 0;
+        ImageReslice = 0;
+        ComImageReslice = 0;
+        Interactor = 0;
     };
 
     void SetImageReslice(vtkImageReslice *reslice1, vtkImageReslice *reslice2) {
-        this->ImageReslice = reslice1;
-        this->ComImageReslice = reslice2;
+        ImageReslice = reslice1;
+        ComImageReslice = reslice2;
     };
 
     vtkImageReslice *GetImageReslice() {
-        return this->ImageReslice;
+        return ImageReslice;
     };
 
     void SetInteractor(vtkRenderWindowInteractor *interactor) {
-        this->Interactor = interactor;
+        Interactor = interactor;
     };
 
     vtkRenderWindowInteractor *GetInteractor() {
-        return this->Interactor;
+        return Interactor;
     };
 
     void Execute(vtkObject *, unsigned long event, void *) VTK_OVERRIDE
     {
-        vtkRenderWindowInteractor *interactor = this->GetInteractor();
+        vtkRenderWindowInteractor *interactor = GetInteractor();
 
         int lastPos[2];
         interactor->GetLastEventPosition(lastPos);
@@ -125,17 +125,17 @@ public:
 
         if (event == vtkCommand::LeftButtonPressEvent)
         {
-            this->Slicing = 1;
+            Slicing = 1;
         }
         else if (event == vtkCommand::LeftButtonReleaseEvent)
         {
-            this->Slicing = 0;
+            Slicing = 0;
         }
         else if (event == vtkCommand::MouseMoveEvent)
         {
-            if (this->Slicing)
+            if (Slicing)
             {
-                vtkImageReslice *reslice = this->ImageReslice;
+                vtkImageReslice *reslice = ImageReslice;
 
                 // Increment slice position by deltaY of mouse
                 int deltaY = lastPos[1] - currPos[1];
@@ -155,9 +155,9 @@ public:
                 matrix->SetElement(1, 3, center[1]);
                 matrix->SetElement(2, 3, center[2]);
 
-                this->ComImageReslice->Update();
+                ComImageReslice->Update();
                 double center2[4];
-                vtkMatrix4x4 *matrix2 = this->ComImageReslice->GetResliceAxes();
+                vtkMatrix4x4 *matrix2 = ComImageReslice->GetResliceAxes();
                 matrix2->MultiplyPoint(point, center2);
                 matrix2->SetElement(0, 3, center2[0]);
                 matrix2->SetElement(1, 3, center2[1]);
@@ -395,33 +395,94 @@ void TestLoadContour()
     currentRoiPolyData->SetPoints(currentRoiContourPoints);
     currentRoiPolyData->SetLines(currentRoiContourCells);
 
-    vtkPlanarContourToRibbonModelConversionRule rule;
-    vtkSmartPointer<vtkPolyData> outRoiPolyData = vtkSmartPointer<vtkPolyData>::New();
-    rule.Convert(currentRoiPolyData, outRoiPolyData);
+    static double contourElements[16] = {
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        1, 0, 0, 0,
+        0, 0, 0, 1 };
+    vtkSmartPointer<vtkMatrix4x4> contourToRASMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
+    contourToRASMatrix->DeepCopy(contourElements);
+    vtkSmartPointer<vtkTransform> WorldToSliceTransform = vtkSmartPointer<vtkTransform>::New();
+    WorldToSliceTransform->SetMatrix(contourToRASMatrix);
+
+    vtkNew<vtkActor2D> PolyDataFillActor;
+    vtkNew<vtkActor2D> PolyDataOutlineActor;
+    vtkNew<vtkActor2D> ImageOutlineActor;
+    vtkSmartPointer<vtkCutter> Cutter;
+    vtkNew<vtkTransformPolyDataFilter> ModelWarper;
+    vtkSmartPointer<vtkPlane> Plane;
+    vtkNew<vtkStripper> Stripper;
+    vtkNew<vtkCleanPolyData> Cleaner;
+    vtkNew<vtkTriangleFilter> TriangleFilter;
+   
+    vtkSmartPointer<vtkGeneralTransform> NodeToWorldTransform;
+    vtkSmartPointer<vtkGeneralTransform> WorldToNodeTransform;
+
+    Cutter = vtkSmartPointer<vtkCutter>::New();
+    Plane = vtkSmartPointer<vtkPlane>::New();
+    Cutter->SetInputConnection(ModelWarper->GetOutputPort());
+    Cutter->SetCutFunction(Plane);
+    Cutter->SetGenerateCutScalars(0);
+    
+    vtkSmartPointer<vtkTransformPolyDataFilter> polyDataOutlineTransformer = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    polyDataOutlineTransformer->SetInputConnection(Cutter->GetOutputPort());
+    polyDataOutlineTransformer->SetTransform(WorldToSliceTransform);
+    vtkSmartPointer<vtkPolyDataMapper2D> polyDataOutlineMapper = vtkSmartPointer<vtkPolyDataMapper2D>::New();
+    polyDataOutlineMapper->SetInputConnection(polyDataOutlineTransformer->GetOutputPort());
+    PolyDataOutlineActor->SetMapper(polyDataOutlineMapper);
+    PolyDataOutlineActor->SetVisibility(0);
+
+    Stripper->SetInputConnection(Cutter->GetOutputPort());
+    Cleaner->SetInputConnection(NULL); // This will be modified in the UpdateDisplayNodePipeline function
+    TriangleFilter->SetInputConnection(Cleaner->GetOutputPort());
+    vtkSmartPointer<vtkTransformPolyDataFilter> polyDataFillTransformer = vtkSmartPointer<vtkTransformPolyDataFilter>::New();
+    polyDataFillTransformer->SetInputConnection(TriangleFilter->GetOutputPort());
+    polyDataFillTransformer->SetTransform(WorldToSliceTransform);
+    vtkSmartPointer<vtkPolyDataMapper2D> polyDataFillMapper = vtkSmartPointer<vtkPolyDataMapper2D>::New();
+    polyDataFillMapper->SetInputConnection(polyDataFillTransformer->GetOutputPort());
+    PolyDataFillActor->SetMapper(polyDataFillMapper);
+    PolyDataFillActor->SetVisibility(0);
+
+    ModelWarper->SetInputData(currentRoiPolyData);
+    ModelWarper->SetTransform(WorldToSliceTransform);
+    
+    double normal[3] = { 1.2695312500000000,0.0,0.0 };
+    double origin[3] = { 0.0,0.0,0.0 };
+    Plane->SetNormal(normal);
+    Plane->SetOrigin(origin);
+    Stripper->SetMaximumLength(10000);
+    Stripper->Update();
+    vtkCellArray* strippedLines = Stripper->GetOutput()->GetLines();
+    vtkSmartPointer<vtkCellArray> closedCells = vtkSmartPointer<vtkCellArray>::New();
+    strippedLines->InitTraversal();
+    vtkSmartPointer<vtkIdList> pointList = vtkSmartPointer<vtkIdList>::New();
+    while (strippedLines->GetNextCell(pointList))
+    {
+        if (pointList->GetNumberOfIds() > 0
+            && pointList->GetId(0) == pointList->GetId(pointList->GetNumberOfIds() - 1))
+        {
+            closedCells->InsertNextCell(pointList);
+        }
+    }
+
+    std::cout << closedCells << std::endl;
 
 
-    vtkSmartPointer<vtkPolyDataMapper> mapper =
-        vtkSmartPointer<vtkPolyDataMapper>::New();
-    mapper->SetInputData(outRoiPolyData);
 
-    vtkSmartPointer<vtkActor> actor =
-        vtkSmartPointer<vtkActor>::New();
-    actor->SetMapper(mapper);
 
-    vtkSmartPointer<vtkRenderer> render =
-        vtkSmartPointer<vtkRenderer>::New();
-    render->AddActor(actor);
-    render->SetBackground(0.0, 0.0, 0.0);
 
-    vtkSmartPointer<vtkRenderWindow> rw =
-        vtkSmartPointer<vtkRenderWindow>::New();
-    rw->AddRenderer(render);
-    rw->SetSize(320, 240);
-    rw->SetWindowName("Creating PolyData Structure");
 
-    vtkSmartPointer<vtkRenderWindowInteractor> rwi =
-        vtkSmartPointer<vtkRenderWindowInteractor>::New();
-    rwi->SetRenderWindow(rw);
-    rwi->Render();
-    rwi->Start();
+
+
+
+
+
+
+
+    //vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+    //    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    //renderWindowInteractor->SetRenderWindow(renderWindow);
+
+    //renderWindow->Render();
+    //renderWindowInteractor->Start();
 }
