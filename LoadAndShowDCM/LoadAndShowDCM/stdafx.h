@@ -11,6 +11,7 @@
 #include <tchar.h>
 #include <iostream>
 #include <string>
+#include <map>
 
 
 // TODO:  在此处引用程序需要的其他头文件
@@ -78,6 +79,52 @@
 #include "vtkCutter.h"
 #include "vtkPolyDataMapper2D.h"
 #include "vtkPlane.h"
+#include "vtkTransform.h"
+#include "vtkImageCanvasSource2D.h"
+#include "vtkImageWrapPad.h"
+#include "vtkImageCheckerboard.h"
+#include "vtkImageExtractComponents.h"
+#include "vtkXYPlotActor.h"
+#include "vtkPolyData.h"
+#include "vtkParallelCoordinatesView.h"
+
+#include <vtkSmartPointer.h>
+#include <vtkPolyData.h>
+#include <vtkPointData.h>
+#include <vtkFloatArray.h>
+#include <vtkParallelCoordinatesView.h>
+#include <vtkParallelCoordinatesRepresentation.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderWindowInteractor.h>
+#include "vtkNew.h"
+
+#include "vtkNew.h"
+#include "vtkRenderWindowInteractor.h"
+#include "vtkInteractorStyleImage.h"
+#include "vtkRenderWindow.h"
+#include "vtkRenderer.h"
+#include "vtkCamera.h"
+#include "vtkImageData.h"
+#include "vtkImageSliceMapper.h"
+#include "vtkImageProperty.h"
+#include "vtkImageSlice.h"
+#include "vtkPNGReader.h"
+#include "vtkImageHistogram.h"
+#include "vtkBarChartActor.h"
+#include "vtkProperty2D.h"
+#include "vtkLegendBoxActor.h"
+
+#include "itkVectorImage.h"
+#include "itkImageToHistogramFilter.h"
+#include "itkImageRandomIteratorWithIndex.h"
+#include "itkImage.h"
+#include "itkImageFileWriter.h"
+//#include "itkContourExtractor2DImageFilter.h"
+#include "itkApproximateSignedDistanceMapImageFilter.h"
+#include "vtkImageHistogram.h"
+
+#include "vtkPolyLine.h"
+#include "vtkImageGridSource.h"
 
 
 

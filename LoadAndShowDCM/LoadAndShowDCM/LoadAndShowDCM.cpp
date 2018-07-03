@@ -191,14 +191,289 @@ private:
     vtkRenderWindowInteractor *Interactor;
 };
 
-int main()
+typedef itk::Image<unsigned char, 2>  UnsignedCharImageType;
+typedef itk::Image<float, 2>  FloatImageType;
+
+static void CreateImage(UnsignedCharImageType::Pointer image);
+
+int main(int, char *[])
 {
-   // TestLoadDoseImage();
-    //TestBlendCTImageAndDose();
-    TestLoadContour();
-    return 0;
+    //vtkSmartPointer<vtkRenderWindow> renWin =
+    //    vtkSmartPointer<vtkRenderWindow>::New();
+
+    //std::string sPath = "E:\\Images\\Test\\";
+    //vtkSmartPointer<vtkDICOMImageReader> reader = vtkSmartPointer<vtkDICOMImageReader>::New();
+    //reader->SetDataByteOrderToLittleEndian();
+    //reader->SetDirectoryName(sPath.c_str());
+    //reader->Update();
+
+    ////vtkNew<vtkImageHistogram> histogram;
+    ////histogram->AutomaticBinningOff();
+    ////histogram->SetNumberOfBins(200);
+    ////histogram->SetBinOrigin(0);
+    ////histogram->SetBinSpacing(1);
+    ////
+    ////histogram->SetInputConnection(reader->GetOutputPort());
+    ////histogram->GenerateHistogramImageOn();
+    ////histogram->SetHistogramImageSize(256, 256);
+    ////histogram->SetHistogramImageScaleToLog();
+    //////histogram->AutomaticBinningOn();
+    ////histogram->Update();
+
+    ////vtkIdType nbins = histogram->GetNumberOfBins();
+    ////double range[2];
+    ////range[0] = histogram->GetBinOrigin();
+    ////range[1] = range[0] + (nbins - 1)*histogram->GetBinSpacing();
+
+    ////for (int i = 0; i < 2; i++)
+    ////{
+    ////    vtkSmartPointer<vtkRenderer> renderer =
+    ////        vtkSmartPointer<vtkRenderer>::New();
+    ////    vtkCamera *camera = renderer->GetActiveCamera();
+    ////    renderer->SetBackground(0.0, 0.0, 0.0);
+    ////    renderer->SetViewport(0.5*(i & 1), 0.0,
+    ////        0.5 + 0.5*(i & 1), 1.0);
+    ////    renWin->AddRenderer(renderer);
+
+    ////    vtkSmartPointer<vtkImageSliceMapper> imageMapper = vtkSmartPointer<vtkImageSliceMapper>::New();
+    ////    if ((i & 1) == 0)
+    ////    {
+    ////        imageMapper->SetInputConnection(reader->GetOutputPort());
+    ////    }
+    ////    else
+    ////    {
+    ////        imageMapper->SetInputConnection(histogram->GetOutputPort());
+    ////        imageMapper->BorderOn();
+    ////    }
+
+    ////    const double *bounds = imageMapper->GetBounds();
+    ////    double point[3];
+    ////    point[0] = 0.5*(bounds[0] + bounds[1]);
+    ////    point[1] = 0.5*(bounds[2] + bounds[3]);
+    ////    point[2] = 0.5*(bounds[4] + bounds[5]);
+
+    ////    camera->SetFocalPoint(point);
+    ////    point[imageMapper->GetOrientation()] += 500.0;
+    ////    camera->SetPosition(point);
+    ////    camera->SetViewUp(0.0, 1.0, 0.0);
+    ////    camera->ParallelProjectionOn();
+    ////    camera->SetParallelScale(128);
+
+    ////    vtkSmartPointer<vtkImageSlice> image = vtkSmartPointer<vtkImageSlice>::New();
+    ////    image->SetMapper(imageMapper);
+
+    ////    renderer->AddViewProp(image);
+
+    ////    if ((i & 1) == 0)
+    ////    {
+    ////        image->GetProperty()->SetColorWindow(range[1] - range[0]);
+    ////        image->GetProperty()->SetColorLevel(0.5*(range[0] + range[1]));
+    ////    }
+    ////    else
+    ////    {
+    ////        image->GetProperty()->SetInterpolationTypeToNearest();
+    ////        image->GetProperty()->SetColorWindow(255.0);
+    ////        image->GetProperty()->SetColorLevel(127.5);
+    ////    }
+    ////}
+
+    //int bins = 300;
+    //int comps = 1;
+
+    //vtkImageAccumulate *histogram = vtkImageAccumulate::New();
+    //histogram->SetInputConnection(reader->GetOutputPort());
+    //histogram->SetComponentExtent(0, bins - 1, 0, 0, 0, 0);
+    //histogram->SetComponentOrigin(0, 0, 0);
+    //histogram->SetComponentSpacing(histogram->/ bins, 0, 0);
+    //histogram->Update();
+
+    //int* output = static_cast<int*>(histogram->GetOutput()->GetScalarPointer());
+    //vtkIntArray* frequencies = vtkIntArray::New();
+    //frequencies->SetNumberOfComponents(1);
+    //for (int j = 0; j < bins; ++j)
+    //{
+    //    for (int i = 0; i < comps; i++)
+    //    {
+    //        frequencies->InsertNextTuple1(*output++);
+    //    }
+    //}
+
+    //vtkDataObject *dataObject = vtkDataObject::New();
+    //dataObject->GetFieldData()->AddArray(frequencies);
+
+    //vtkSmartPointer<vtkBarChartActor> barChart = vtkSmartPointer<vtkBarChartActor>::New();
+    //barChart->SetInput(dataObject);
+    //barChart->SetTitle("Histogram");
+    //barChart->GetPositionCoordinate()->SetValue(0.05, 0.05, 0.0);
+    //barChart->GetPosition2Coordinate()->SetValue(0.95, 0.95, 0.0);
+    //barChart->GetProperty()->SetColor(0, 0, 0);
+    //barChart->GetTitleTextProperty()->SetColor(0, 0, 0);
+    //barChart->GetLabelTextProperty()->SetColor(0, 0, 0);
+    //barChart->GetLegendActor()->SetNumberOfEntries(dataObject->GetFieldData()->GetArray(0)->GetNumberOfTuples());
+    //barChart->LegendVisibilityOff();
+    //barChart->LabelVisibilityOff();
+
+    //vtkSmartPointer<vtkRenderer> renderer =
+    //    vtkSmartPointer<vtkRenderer>::New();
+    //renderer->SetBackground(1.0, 1.0, 1.0);
+    //renderer->AddActor(barChart);
+    //renWin->AddRenderer(renderer);
+    //vtkSmartPointer<vtkInteractorStyleImage> imageStyle =
+    //    vtkSmartPointer<vtkInteractorStyleImage>::New();
+    //vtkSmartPointer<vtkRenderWindowInteractor> interactor =
+    //    vtkSmartPointer<vtkRenderWindowInteractor>::New();
+    //interactor->SetInteractorStyle(imageStyle);
+    //renWin->SetInteractor(interactor);
+    //renWin->SetSize(512, 256);
+    //renWin->Render();
+    //interactor->Start();
+
+
+std::map<int, double> mapThickness;
+for (int i = 0; i < 80; ++i)
+{
+    mapThickness.insert(std::make_pair(i, 3));
+}
+const double length = 100;
+const double X1Position = -40;
+const double Y1Position = -40;
+const double X2Position = 40;
+const double Y2Position = 40;
+
+//Below is update Code
+vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+auto leaveNumberOfMLC = mapThickness.size();
+points->InsertNextPoint(-1.0 * length, -1.0 * length, 0);
+points->InsertNextPoint(length, -1.0 * length, 0);
+
+vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+for (int i = 0; i < leaveNumberOfMLC; ++i)
+{
+    points->InsertNextPoint(-1.0 * length, -1.0 * length + i * mapThickness[i], 0);
+    points->InsertNextPoint(length, -1.0 * length + i * mapThickness[i], 0);
+    vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
+  
+    polyLine->GetPointIds()->SetNumberOfIds(4);
+    polyLine->GetPointIds()->SetId(0, 2 * i + 0);
+    polyLine->GetPointIds()->SetId(1, 2 * i + 1);
+    polyLine->GetPointIds()->SetId(2, 2 * i + 2);
+    polyLine->GetPointIds()->SetId(3, 2 * i + 3);
+    cells->InsertNextCell(polyLine);
 }
 
+// Create a polydata to store everything in
+vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+
+// Add the points to the dataset
+polyData->SetPoints(points);
+
+// Add the lines to the dataset
+polyData->SetLines(cells);
+
+// Setup actor and mapper
+vtkSmartPointer<vtkPolyDataMapper> mapper =
+vtkSmartPointer<vtkPolyDataMapper>::New();
+mapper->SetInputData(polyData);
+vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
+actor->SetMapper(mapper);
+actor->GetProperty()->SetColor(255.0 / 255.0, .0 / 255.0, .0 / 255.0);
+actor->GetProperty()->SetVertexColor(0.0 / 255.0, 255.0 / 255.0, .0 / 255.0);
+
+
+vtkSmartPointer<vtkImageGridSource> source =
+vtkSmartPointer<vtkImageGridSource>::New();
+source->SetFillValue(122);
+source->Update();
+
+
+
+//-------------------------//
+vtkSmartPointer<vtkPoints> jawPoints = vtkSmartPointer<vtkPoints>::New();
+jawPoints->InsertNextPoint(X1Position, Y1Position, 0);
+jawPoints->InsertNextPoint(X2Position, Y1Position, 0);
+jawPoints->InsertNextPoint(X2Position, Y2Position, 0);
+jawPoints->InsertNextPoint(X1Position, Y2Position, 0);
+
+vtkSmartPointer<vtkPolyLine> jawPolyLine = vtkSmartPointer<vtkPolyLine>::New();
+jawPolyLine->GetPointIds()->SetNumberOfIds(5);
+jawPolyLine->GetPointIds()->SetId(0, 0);
+jawPolyLine->GetPointIds()->SetId(1, 1);
+jawPolyLine->GetPointIds()->SetId(2, 2);
+jawPolyLine->GetPointIds()->SetId(3, 3);
+jawPolyLine->GetPointIds()->SetId(4, 0);
+
+vtkSmartPointer<vtkCellArray> jawCells = vtkSmartPointer<vtkCellArray>::New();
+jawCells->InsertNextCell(jawPolyLine);
+
+// Create a polydata to store everything in
+vtkSmartPointer<vtkPolyData> jawPolyData = vtkSmartPointer<vtkPolyData>::New();
+
+// Add the points to the dataset
+jawPolyData->SetPoints(jawPoints);
+
+// Add the lines to the dataset
+jawPolyData->SetLines(jawCells);
+vtkSmartPointer<vtkPolyDataMapper> jawMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+jawMapper->SetInputData(jawPolyData);
+vtkSmartPointer<vtkActor> jawActor = vtkSmartPointer<vtkActor>::New();
+jawActor->SetMapper(jawMapper);
+jawActor->GetProperty()->SetColor(18.0 / 255.0, 20.0 / 255.0, 19.0 / 255.0);
+jawActor->GetProperty()->SetLineWidth(2);
+
+// Setup render window, renderer, and interactor
+vtkSmartPointer<vtkRenderer> renderer =
+vtkSmartPointer<vtkRenderer>::New();
+vtkSmartPointer<vtkRenderWindow> renderWindow =
+vtkSmartPointer<vtkRenderWindow>::New();
+renderWindow->AddRenderer(renderer);
+vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
+vtkSmartPointer<vtkRenderWindowInteractor>::New();
+renderWindowInteractor->SetRenderWindow(renderWindow);
+renderer->AddActor(actor);
+renderer->AddActor(jawActor);
+renderer->SetBackground(19.0 / 255.0, 49.0 / 255.0, 76.0 / 255.0);
+renderWindow->Render();
+renderWindowInteractor->Start();
+    return EXIT_SUCCESS;
+}
+
+void CreateImage(UnsignedCharImageType::Pointer image)
+{
+    // Create an image
+    itk::Index<2> start;
+    start.Fill(0);
+
+    itk::Size<2> size;
+    size.Fill(100);
+
+    itk::ImageRegion<2> region(start, size);
+    image->SetRegions(region);
+    image->Allocate();
+    image->FillBuffer(0);
+
+    // Create a line of white pixels
+    for (unsigned int i = 40; i < 60; ++i)
+    {
+        itk::Index<2> pixel;
+        pixel.Fill(i);
+        image->SetPixel(pixel, 255);
+    }
+
+    // Create another line of pixels
+    for (unsigned int i = 10; i < 20; ++i)
+    {
+        itk::Index<2> pixel;
+        pixel[0] = 10;
+        pixel[1] = i;
+        image->SetPixel(pixel, 255);
+    }
+
+    typedef  itk::ImageFileWriter< UnsignedCharImageType  > WriterType;
+    WriterType::Pointer writer = WriterType::New();
+    writer->SetFileName("image.png");
+    writer->SetInput(image);
+    writer->Update();
+}
 
 void TestBlendCTImageAndDose()
 {
