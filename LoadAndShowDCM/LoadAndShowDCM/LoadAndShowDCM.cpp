@@ -332,7 +332,7 @@ int main(int, char *[])
 std::map<int, double> mapThickness;
 for (int i = 0; i < 80; ++i)
 {
-    mapThickness.insert(std::make_pair(i, 3));
+    mapThickness.insert(std::make_pair(i, 2));
 }
 const double length = 100;
 const double X1Position = -40;
@@ -343,21 +343,27 @@ const double Y2Position = 40;
 //Below is update Code
 vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
 auto leaveNumberOfMLC = mapThickness.size();
-points->InsertNextPoint(-1.0 * length, -1.0 * length, 0);
-points->InsertNextPoint(length, -1.0 * length, 0);
+
 
 vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
+//vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
+//polyLine->GetPointIds()->SetNumberOfIds(4);
+//polyLine->GetPointIds()->SetId(0, 0);
+//polyLine->GetPointIds()->SetId(1, 1);
+//cells->InsertNextCell(polyLine);
 for (int i = 0; i < leaveNumberOfMLC; ++i)
 {
     points->InsertNextPoint(-1.0 * length, -1.0 * length + i * mapThickness[i], 0);
     points->InsertNextPoint(length, -1.0 * length + i * mapThickness[i], 0);
+    points->InsertNextPoint(length, -1.0 * length + (i+ 1)* mapThickness[i] - 0.1, 0);
+    points->InsertNextPoint(-1.0 * length, -1.0 * length + (i + 1)* mapThickness[i] - 0.1, 0);
+    
     vtkSmartPointer<vtkPolyLine> polyLine = vtkSmartPointer<vtkPolyLine>::New();
-  
     polyLine->GetPointIds()->SetNumberOfIds(4);
-    polyLine->GetPointIds()->SetId(0, 2 * i + 0);
-    polyLine->GetPointIds()->SetId(1, 2 * i + 1);
-    polyLine->GetPointIds()->SetId(2, 2 * i + 2);
-    polyLine->GetPointIds()->SetId(3, 2 * i + 3);
+    polyLine->GetPointIds()->SetId(0, 4 * i + 0);
+    polyLine->GetPointIds()->SetId(1, 4 * i + 1);
+    polyLine->GetPointIds()->SetId(2, 4 * i + 2);
+    polyLine->GetPointIds()->SetId(3, 4 * i + 3);
     cells->InsertNextCell(polyLine);
 }
 
@@ -367,8 +373,11 @@ vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
 // Add the points to the dataset
 polyData->SetPoints(points);
 
+
 // Add the lines to the dataset
-polyData->SetLines(cells);
+polyData->SetPolys(cells);
+
+
 
 // Setup actor and mapper
 vtkSmartPointer<vtkPolyDataMapper> mapper =
@@ -376,17 +385,7 @@ vtkSmartPointer<vtkPolyDataMapper>::New();
 mapper->SetInputData(polyData);
 vtkSmartPointer<vtkActor> actor = vtkSmartPointer<vtkActor>::New();
 actor->SetMapper(mapper);
-actor->GetProperty()->SetColor(255.0 / 255.0, .0 / 255.0, .0 / 255.0);
-actor->GetProperty()->SetVertexColor(0.0 / 255.0, 255.0 / 255.0, .0 / 255.0);
-
-
-vtkSmartPointer<vtkImageGridSource> source =
-vtkSmartPointer<vtkImageGridSource>::New();
-source->SetFillValue(122);
-source->Update();
-
-
-
+actor->GetProperty()->SetColor(62.0 / 255.0, 80.0 / 255.0, 100.0 / 255.0);
 //-------------------------//
 vtkSmartPointer<vtkPoints> jawPoints = vtkSmartPointer<vtkPoints>::New();
 jawPoints->InsertNextPoint(X1Position, Y1Position, 0);
@@ -429,11 +428,37 @@ renderWindow->AddRenderer(renderer);
 vtkSmartPointer<vtkRenderWindowInteractor> renderWindowInteractor =
 vtkSmartPointer<vtkRenderWindowInteractor>::New();
 renderWindowInteractor->SetRenderWindow(renderWindow);
+// Setup the text and add it to the renderer  
+vtkTextProperty*pTexProper = vtkTextProperty::New(); //声明文本属性
+pTexProper->SetColor(1, 1, 0);
+pTexProper->SetFontSize(18);
+pTexProper->SetFontFamily(0);
+pTexProper->SetJustification(1);
+pTexProper->SetBold(1);
+pTexProper->SetItalic(1);
+pTexProper->SetShadow(1);
+vtkSmartPointer textActor = vtkSmartPointer::New(); //声明3D文本
+textActor->SetInput("hengshui");
+textActor->SetTextProperty(pTexProper);
+textActor->SetPosition(80, 80, 5); //设置位置
+textActor->SetScale(0.7, 0.7, 0.7); //设置文字大小
+textActor->RotateX(90.0)
+
+
+vtkSmartPointer<vtkTextActor> textActor = vtkSmartPointer<vtkTextActor>::New();
+textActor->SetInput ("1111");
+textActor->SetPosition(X2Position, Y2Position);
+textActor->GetTextProperty()->SetFontSize (5);
+textActor->GetTextProperty()->SetColor ( 1.0, 0.0, 0.0 );
+renderer->AddActor2D( textActor );
 renderer->AddActor(actor);
 renderer->AddActor(jawActor);
 renderer->SetBackground(19.0 / 255.0, 49.0 / 255.0, 76.0 / 255.0);
 renderWindow->Render();
 renderWindowInteractor->Start();
+
+
+
     return EXIT_SUCCESS;
 }
 

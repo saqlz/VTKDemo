@@ -125,6 +125,41 @@
 
 #include "vtkPolyLine.h"
 #include "vtkImageGridSource.h"
+#include "vtkHyperTreeGridSource.h"
+#include "vtkHyperTreeGridGeometry.h"
+
+#include "vtkHyperTreeGrid.h"
+#include "vtkHyperTreeGridGeometry.h"
+#include "vtkHyperTreeGridSource.h"
+
+#include "vtkCamera.h"
+#include "vtkCellData.h"
+#include "vtkDataSetMapper.h"
+#include "vtkLineSource.h"
+#include "vtkNew.h"
+#include "vtkPoints.h"
+#include "vtkPolyData.h"
+#include "vtkPolyDataMapper.h"
+#include "vtkPolyLine.h"
+#include "vtkProperty.h"
+#include "vtkRegressionTestImage.h"
+#include "vtkRenderer.h"
+#include "vtkRenderWindow.h"
+#include "vtkRenderWindowInteractor.h"
+
+#include <vtkVersion.h>
+#include <vtkSmartPointer.h>
+#include <vtkRectilinearGrid.h>
+#include <vtkMath.h>
+#include <vtkDoubleArray.h>
+#include <vtkDataSetMapper.h>
+#include <vtkActor.h>
+#include <vtkRenderWindow.h>
+#include <vtkRenderer.h>
+#include <vtkRenderWindowInteractor.h>
+#include "vtkStructuredGrid.h"
+#include "vtkStructuredGridGeometryFilter.h"
+#include "vtkTextActor.h"
 
 
 
